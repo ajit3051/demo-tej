@@ -27,6 +27,7 @@ error_reporting(E_ALL);
    // Item data
    $item_name               = $_POST['item_name'] ?? [];
    $barcode_no              = $_POST['barcode_no'] ?? [];
+   $article_no              = $_POST['article_no'] ?? [];
    $item_type               = $_POST['item_type'] ?? [];
    $category                = $_POST['group_name'] ?? [];
    $brand                   = $_POST['brand'] ?? [];
@@ -79,6 +80,7 @@ error_reporting(E_ALL);
    $current_date = date("Y-m-d H:i:s");
 
    $is_print = $_POST['is_print'] ?? '0';
+   $print_option = $_POST['print_option'] ?? '80mm';
 
    if ($_POST['submit'] == 'save') {
 
@@ -98,15 +100,17 @@ error_reporting(E_ALL);
          $cur_taxable_amount   = (isset($taxable_amount[$k]) && $taxable_amount[$k] !== '') ? $taxable_amount[$k] : '0.00';
          $cur_amount           = (isset($amount[$k]) && $amount[$k] !== '') ? $amount[$k] : '0.00';
 
+         $cur_article          = (isset($article_no[$k]) && $article_no[$k] !== '') ? $article_no[$k] : '';
+
          //get GST value
          $othergstvalue = getGSTValueBygstType($cur_gst);
          $cgst = (string)($othergstvalue ?? '0.00');
          $sgst = (string)($othergstvalue ?? '0.00');
 
          $result = $db->insert(
-            'INSERT INTO tbl_bill (purchage_date, bill_number, gst_type, under_gst, bill_type, item_name, barcode_number, item_type, category, brand, color, size, stock_qty, qty, balance_qty, mou_name, rate, purchase_price, percent_discount, discount_amt, net_price, gst, cgst, sgst, gst_amount, taxable_amount, amount, packing_amount, delivery_amount, other_amount, labour_amount, percent_total_discount, discount_total_amount, remarks, status, s_code, store_name, location, ac_code, account_name, mobile_number, pay_mode, pay_cash, pay_upi, pay_card, pay_credit, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-            'ssssssssssssssssssssssssssssssssssssssssssssssss',
-            $purchage_date, $bill_number, $gst_type, $under_gst, $bill_type, $item_name[$k], $barcode, $item_type[$k], $category[$k], $brand[$k], $color[$k], $size[$k], $cur_stock_qty, $cur_qty, $cur_balance_qty, $mou_name[$k], $cur_rate, $cur_purchase_price, $cur_percent_discount, $cur_discount_amt, $cur_net_price, $cur_gst, $cgst, $sgst, $cur_gst_amount, $cur_taxable_amount, $cur_amount, $packing_amount, $delivery_amount, $other_amount, $labour_amount, $percent_total_discount, $discount_total_amount, $remarks, $status, $s_code, $store_name, $location, $popup_ac_code, $popup_account_name, $popup_mobile_number, $popup_pay_mode, $popup_pay_cash, $popup_pay_upi, $popup_pay_card, $popup_pay_credit, $current_date, $current_date
+            'INSERT INTO tbl_bill (purchage_date, bill_number, gst_type, under_gst, bill_type, item_name, barcode_number, article_no, item_type, category, brand, color, size, stock_qty, qty, balance_qty, mou_name, rate, purchase_price, percent_discount, discount_amt, net_price, gst, cgst, sgst, gst_amount, taxable_amount, amount, packing_amount, delivery_amount, other_amount, labour_amount, percent_total_discount, discount_total_amount, remarks, status, s_code, store_name, location, ac_code, account_name, mobile_number, pay_mode, pay_cash, pay_upi, pay_card, pay_credit, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            'sssssssssssssssssssssssssssssssssssssssssssssssss',
+            $purchage_date, $bill_number, $gst_type, $under_gst, $bill_type, $item_name[$k], $barcode, $cur_article, $item_type[$k], $category[$k], $brand[$k], $color[$k], $size[$k], $cur_stock_qty, $cur_qty, $cur_balance_qty, $mou_name[$k], $cur_rate, $cur_purchase_price, $cur_percent_discount, $cur_discount_amt, $cur_net_price, $cur_gst, $cgst, $sgst, $cur_gst_amount, $cur_taxable_amount, $cur_amount, $packing_amount, $delivery_amount, $other_amount, $labour_amount, $percent_total_discount, $discount_total_amount, $remarks, $status, $s_code, $store_name, $location, $popup_ac_code, $popup_account_name, $popup_mobile_number, $popup_pay_mode, $popup_pay_cash, $popup_pay_upi, $popup_pay_card, $popup_pay_credit, $current_date, $current_date
          );
 
          if (!$result) {
@@ -119,6 +123,7 @@ error_reporting(E_ALL);
          $return = '';
          if ($is_print == '1') {
             $_SESSION['print_bill_no'] = $bill_number;
+            $_SESSION['print_option']  = $print_option;
          }
       } else {
          $msg = 'Failed!';
@@ -151,21 +156,23 @@ error_reporting(E_ALL);
          $cgst = (string)($othergstvalue ?? '0.00');
          $sgst = (string)($othergstvalue ?? '0.00');
 
+         $cur_article          = (isset($article_no[$k]) && $article_no[$k] !== '') ? $article_no[$k] : '';
+
          // Only treat as an existing tbl_bill row if item_id[$k] is a real,
          // non-empty value. Newly-added rows always come through as ''.
          $isExist = (!empty($item_id[$k])) ? $item_id[$k] : null;
 
          if ($isExist) {
             $result = $db->update(
-               "UPDATE tbl_bill SET purchage_date=?, gst_type=?, under_gst=?, bill_type=?, item_name=?, barcode_number=?, item_type=?, category=?, brand=?, color=?, size=?, stock_qty=?, qty=?, balance_qty=?, mou_name=?, rate=?, purchase_price=?, percent_discount=?, discount_amt=?, net_price=?, gst=?, cgst=?, sgst=?, gst_amount=?, taxable_amount=?, amount=?, packing_amount=?, delivery_amount=?, other_amount=?, labour_amount=?, percent_total_discount=?, discount_total_amount=?, remarks=?, status=?, s_code=?, store_name=?, location=?, ac_code=?, account_name=?, mobile_number=?, pay_mode=?, pay_cash=?, pay_upi=?, pay_card=?, pay_credit=?, updated_date=? WHERE id=?",
-               'ssssssssssssssssssssssssssssssssssssssssssssssi',
-               $purchage_date, $gst_type, $under_gst, $bill_type, $item_name[$k], $barcode, $item_type[$k], $category[$k], $brand[$k], $color[$k], $size[$k], $cur_stock_qty, $cur_qty, $cur_balance_qty, $mou_name[$k], $cur_rate, $cur_purchase_price, $cur_percent_discount, $cur_discount_amt, $cur_net_price, $cur_gst, $cgst, $sgst, $cur_gst_amount, $cur_taxable_amount, $cur_amount, $packing_amount, $delivery_amount, $other_amount, $labour_amount, $percent_total_discount, $discount_total_amount, $remarks, $status, $s_code, $store_name, $location, $popup_ac_code, $popup_account_name, $popup_mobile_number, $popup_pay_mode, $popup_pay_cash, $popup_pay_upi, $popup_pay_card, $popup_pay_credit, $current_date, $item_id[$k]
+               "UPDATE tbl_bill SET purchage_date=?, gst_type=?, under_gst=?, bill_type=?, item_name=?, barcode_number=?, article_no=?, item_type=?, category=?, brand=?, color=?, size=?, stock_qty=?, qty=?, balance_qty=?, mou_name=?, rate=?, purchase_price=?, percent_discount=?, discount_amt=?, net_price=?, gst=?, cgst=?, sgst=?, gst_amount=?, taxable_amount=?, amount=?, packing_amount=?, delivery_amount=?, other_amount=?, labour_amount=?, percent_total_discount=?, discount_total_amount=?, remarks=?, status=?, s_code=?, store_name=?, location=?, ac_code=?, account_name=?, mobile_number=?, pay_mode=?, pay_cash=?, pay_upi=?, pay_card=?, pay_credit=?, updated_date=? WHERE id=?",
+               'sssssssssssssssssssssssssssssssssssssssssssssssi',
+               $purchage_date, $gst_type, $under_gst, $bill_type, $item_name[$k], $barcode, $cur_article, $item_type[$k], $category[$k], $brand[$k], $color[$k], $size[$k], $cur_stock_qty, $cur_qty, $cur_balance_qty, $mou_name[$k], $cur_rate, $cur_purchase_price, $cur_percent_discount, $cur_discount_amt, $cur_net_price, $cur_gst, $cgst, $sgst, $cur_gst_amount, $cur_taxable_amount, $cur_amount, $packing_amount, $delivery_amount, $other_amount, $labour_amount, $percent_total_discount, $discount_total_amount, $remarks, $status, $s_code, $store_name, $location, $popup_ac_code, $popup_account_name, $popup_mobile_number, $popup_pay_mode, $popup_pay_cash, $popup_pay_upi, $popup_pay_card, $popup_pay_credit, $current_date, $item_id[$k]
             );
          } else {
             $result = $db->insert(
-               'INSERT INTO tbl_bill (purchage_date, bill_number, gst_type, under_gst, bill_type, item_name, barcode_number, item_type, category, brand, color, size, stock_qty, qty, balance_qty, mou_name, rate, purchase_price, percent_discount, discount_amt, net_price, gst, cgst, sgst, gst_amount, taxable_amount, amount, packing_amount, delivery_amount, other_amount, labour_amount, percent_total_discount, discount_total_amount, remarks, status, s_code, store_name, location, ac_code, account_name, mobile_number, pay_mode, pay_cash, pay_upi, pay_card, pay_credit, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-               'ssssssssssssssssssssssssssssssssssssssssssssssss',
-               $purchage_date, $bill_number, $gst_type, $under_gst, $bill_type, $item_name[$k], $barcode, $item_type[$k], $category[$k], $brand[$k], $color[$k], $size[$k], $cur_stock_qty, $cur_qty, $cur_balance_qty, $mou_name[$k], $cur_rate, $cur_purchase_price, $cur_percent_discount, $cur_discount_amt, $cur_net_price, $cur_gst, $cgst, $sgst, $cur_gst_amount, $cur_taxable_amount, $cur_amount, $packing_amount, $delivery_amount, $other_amount, $labour_amount, $percent_total_discount, $discount_total_amount, $remarks, $status, $s_code, $store_name, $location, $popup_ac_code, $popup_account_name, $popup_mobile_number, $popup_pay_mode, $popup_pay_cash, $popup_pay_upi, $popup_pay_card, $popup_pay_credit, $current_date, $current_date
+               'INSERT INTO tbl_bill (purchage_date, bill_number, gst_type, under_gst, bill_type, item_name, barcode_number, article_no, item_type, category, brand, color, size, stock_qty, qty, balance_qty, mou_name, rate, purchase_price, percent_discount, discount_amt, net_price, gst, cgst, sgst, gst_amount, taxable_amount, amount, packing_amount, delivery_amount, other_amount, labour_amount, percent_total_discount, discount_total_amount, remarks, status, s_code, store_name, location, ac_code, account_name, mobile_number, pay_mode, pay_cash, pay_upi, pay_card, pay_credit, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+               'sssssssssssssssssssssssssssssssssssssssssssssssss',
+               $purchage_date, $bill_number, $gst_type, $under_gst, $bill_type, $item_name[$k], $barcode, $cur_article, $item_type[$k], $category[$k], $brand[$k], $color[$k], $size[$k], $cur_stock_qty, $cur_qty, $cur_balance_qty, $mou_name[$k], $cur_rate, $cur_purchase_price, $cur_percent_discount, $cur_discount_amt, $cur_net_price, $cur_gst, $cgst, $sgst, $cur_gst_amount, $cur_taxable_amount, $cur_amount, $packing_amount, $delivery_amount, $other_amount, $labour_amount, $percent_total_discount, $discount_total_amount, $remarks, $status, $s_code, $store_name, $location, $popup_ac_code, $popup_account_name, $popup_mobile_number, $popup_pay_mode, $popup_pay_cash, $popup_pay_upi, $popup_pay_card, $popup_pay_credit, $current_date, $current_date
             );
          }
 
@@ -178,7 +185,8 @@ error_reporting(E_ALL);
          $msg = 'Record Updated successfully';
          $return = '';
          if ($is_print == '1') {
-            $_SESSION['print_bill_no'] = $bill_no;
+            $_SESSION['print_bill_no'] = !empty($bill_no) ? $bill_no : $bill_number;
+            $_SESSION['print_option']  = $print_option;
             redirectTo('sale-creations.php?bill_no=' . $bill_no, $msg, $return);
          }
       } else {
@@ -338,71 +346,344 @@ while ($z = $szRes->fetch_assoc()) {
 </style>
 <!--end table delete icon-->
 <!-- POPUP -->
+<style>
+   #modernPopup-save .popup-box {
+      max-width: 600px;
+      width: 95%;
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 28px 32px;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+   }
+   #modernPopup-save .popup-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+   }
+   #modernPopup-save .close-popup {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 12px;
+      background: #f1f5f9;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+   }
+   #modernPopup-save .close-popup:hover {
+      background: #fee2e2;
+      color: #ef4444;
+   }
+   .popup-bill-card {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin: 16px 0 20px 0;
+      text-align: center;
+      color: #ffffff;
+      box-shadow: 0 6px 20px rgba(15,23,42,0.15);
+   }
+   .popup-bill-card .bill-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #94a3b8;
+      margin-bottom: 4px;
+   }
+   .popup-bill-card .bill-amount {
+      font-size: 32px;
+      font-weight: 800;
+      color: #38bdf8;
+      letter-spacing: -0.5px;
+   }
+   #modernPopup-save .form-group-modern {
+      margin-bottom: 16px;
+   }
+   #modernPopup-save .form-group-modern label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+      display: block;
+   }
+   #modernPopup-save .popup-input,
+   #modernPopup-save .popup-select {
+      height: 48px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      padding: 0 14px;
+      font-size: 14px;
+      background: #f8fafc;
+      transition: all 0.2s ease;
+      color: #0f172a;
+      width: 100%;
+   }
+   #modernPopup-save .popup-input:focus,
+   #modernPopup-save .popup-select:focus {
+      border-color: #0284c7;
+      background: #ffffff;
+      box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.12);
+   }
+   #modernPopup-save .popup-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 14px;
+   }
+   #modernPopup-save .popup-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+   }
+   #modernPopup-save .popup-btn {
+      height: 48px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+   }
+   #modernPopup-save .cancel-btn {
+      background: #f1f5f9;
+      color: #475569;
+   }
+   #modernPopup-save .cancel-btn:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+   }
+   #modernPopup-save .save-btn {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+   }
+   #modernPopup-save .save-btn:hover {
+      background: linear-gradient(135deg, #0369a1, #075985);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.4);
+   }
+   #modernPopup-save .print-btn {
+      background: linear-gradient(135deg, #059669, #047857);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+   }
+   #modernPopup-save .print-btn:hover {
+      background: linear-gradient(135deg, #047857, #065f46);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4);
+   }
+</style>
 <div class="modern-popup-save" id="modernPopup-save">
    <div class="popup-box">
-      <button class="close-popup" onclick="closePopupsave()"><i class="fa fa-times"></i></button>
-      <h3 class="popup-title" style="text-align:center;">Payment mode details</h3>
-      <div id="popup_error_msg" style="display:none;background:#fdecea;color:#e53935;padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:13px;">
-         <span id="popup_error_text"></span>
+      <!-- CLOSE -->
+      <button type="button" class="close-popup" onclick="closePopupsave()">
+         <i class="fa fa-times"></i>
+      </button>
+      <h3 class="popup-title">
+         <i class="fa fa-credit-card" style="color: #0284c7;"></i> Payment &amp; Account Details
+      </h3>
+
+      <!-- VALIDATION ERROR BANNER -->
+      <div id="popup_error_msg" style="display:none;background:#fff0f0;border:1px solid #f5c2c2;border-left:4px solid #e53935;border-radius:12px;padding:12px 14px;margin-top:12px;margin-bottom:14px;font-size:13px;color:#b71c1c;gap:10px;line-height:1.6;">
+         <div style="display:flex;align-items:flex-start;gap:8px;">
+            <i class="fa fa-exclamation-circle" style="font-size:15px;flex-shrink:0;margin-top:2px;"></i>
+            <span id="popup_error_text"></span>
+         </div>
       </div>
+
+      <?php
+         $row_ac = [
+            'account_code' => $ac_code ?? '',
+            'mobile_no_1' => $mobile_number ?? '',
+            'account_name' => $account_name ?? ''
+         ];
+         if (!empty($mobile_number) || !empty($account_name)) {
+            $ac_stmt = $db->select("SELECT * FROM tbl_account_master WHERE mobile_no_1 =? OR account_name=?", 'ss', $mobile_number, $account_name);
+            if ($ac_stmt && $ac_stmt->num_rows > 0) {
+               $fetched_ac = $ac_stmt->fetch_assoc();
+               if ($fetched_ac) {
+                  $row_ac = $fetched_ac;
+               }
+            }
+         }
+      ?>
+
+      <!-- Bill Amount Hero Card -->
+      <div class="popup-bill-card">
+         <div class="bill-label"><i class="fa fa-file-text-o"></i> Total Payable Amount</div>
+         <div class="bill-amount" id="popup_bill_amount">₹0.00</div>
+      </div>
+
+      <!-- Account Master Inputs -->
       <div class="row">
-         <div class="col-md-6"><div class="form-group-modern" style="position:relative;">
-            <label>A/C Code</label>
-            <input type="text" name="ac_code" class="popup-input" placeholder="Enter your A/C Code" oninput="getPopupAccountDetails(this.value,'ac_code')">
-            <div id="popup_ac_suggestions" class="autocomplete-suggestions" style="display:none;position:absolute;background:#fff;border:1px solid #eee;z-index:10;width:100%;"></div>
-         </div></div>
-         <div class="col-md-6"><div class="form-group-modern">
-            <label>Mobile No</label>
-            <input type="text" name="mobile_number" class="popup-input" placeholder="Enter your Mobile No" oninput="getPopupAccountDetails(this.value,'mobile')">
-         </div></div>
+         <div class="col-md-6">
+            <div class="form-group-modern" style="position: relative;">
+               <label>A/C Code</label>
+               <input type="text"
+                  class="popup-input"
+                  id="popup_account_code"
+                  name="ac_code"
+                  placeholder="Enter A/C Code"
+                  autocomplete="off"
+                  value="<?= htmlspecialchars($row_ac['account_code'] ?? ''); ?>"
+                  oninput="getPopupAccountDetails(this.value,'ac_code')">
+               <div id="popup_ac_suggestions" class="autocomplete-suggestions" style="display:none; position:absolute; left:0; top:100%; width:100%; z-index:1050; background:#fff; border:1px solid #cbd5e1; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,0.12); max-height:180px; overflow-y:auto;"></div>
+            </div>
+         </div>
+         <div class="col-md-6">
+            <div class="form-group-modern" style="position: relative;">
+               <label>Mobile No</label>
+               <input type="text"
+                  class="popup-input"
+                  id="popup_mobile_number"
+                  name="mobile_number"
+                  placeholder="Enter Mobile No"
+                  autocomplete="off"
+                  value="<?= htmlspecialchars($row_ac['mobile_no_1'] ?? ''); ?>"
+                  oninput="getPopupAccountDetails(this.value,'mobile')">
+               <div id="suggestions_mobile" class="autocomplete-suggestions" style="display:none; position:absolute; left:0; top:100%; width:100%; z-index:1050; background:#fff; border:1px solid #cbd5e1; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,0.12); max-height:180px; overflow-y:auto;"></div>
+            </div>
+         </div>
       </div>
-      <div class="form-group-modern">
+      <div class="form-group-modern" style="position: relative;">
          <label>A/C Name</label>
-         <input type="text" name="account_name" class="popup-input" placeholder="Enter your A/C Name" oninput="getPopupAccountDetails(this.value,'account_name')">
+         <input type="text"
+            class="popup-input"
+            id="popup_account_name"
+            name="account_name"
+            placeholder="Enter Account Name"
+            autocomplete="off"
+            value="<?= htmlspecialchars($row_ac['account_name'] ?? ''); ?>"
+            oninput="getPopupAccountDetails(this.value,'account_name')">
+         <div id="suggestions_account_name" class="autocomplete-suggestions" style="display:none; position:absolute; left:0; top:100%; width:100%; z-index:1050; background:#fff; border:1px solid #cbd5e1; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,0.12); max-height:180px; overflow-y:auto;"></div>
       </div>
-      <div class="form-group-modern" style="text-align: center;">
-         <label>Your Bill Amount</label><br>
-         <span id="popup_bill_amount">₹0.00</span>
-      </div>
-      <div class="row">
-         <div class="col-md-12">
-         <div class="form-group-modern">
-         <label class="popup-text">Payment Mode</label>
-         <select name="pay_mode" id="payment_mode_select" class="popup-select" onchange="handlePaymentMode(this.value)">
-            <option value="">Select Option</option>
-            <option value="CASH">CASH</option>
-            <option value="UPI">UPI</option>
-            <option value="CARD">CARD</option>
-            <option value="CREDIT">CREDIT</option>
-            <option value="DUAL">DUAL</option>
+
+      <!-- Payment Mode Selection -->
+      <div class="form-group-modern">
+         <label>Payment Mode <span style="color:#e53935;">*</span></label>
+         <?php
+            $default_pay_mode = !empty($DEFAULT_PAYMENT_MODE) ? $DEFAULT_PAYMENT_MODE : (defined('_DEFAULT_PAYMENT_MODE_') ? _DEFAULT_PAYMENT_MODE_ : 'CASH');
+            $default_pay_mode = strtoupper(trim($default_pay_mode));
+            $active_pay_mode  = !empty($pay_mode) ? strtoupper(trim($pay_mode)) : $default_pay_mode;
+         ?>
+         <select class="popup-select" name="pay_mode" id="payment_mode_select" onchange="handlePaymentMode(this.value)">
+            <option value="">-- Select Payment Mode --</option>
+            <option value="CASH" <?= ($active_pay_mode == 'CASH') ? 'selected' : '' ?>>CASH</option>
+            <option value="UPI" <?= ($active_pay_mode == 'UPI') ? 'selected' : '' ?>>UPI</option>
+            <option value="CARD" <?= ($active_pay_mode == 'CARD') ? 'selected' : '' ?>>CARD</option>
+            <option value="CREDIT" <?= ($active_pay_mode == 'CREDIT') ? 'selected' : '' ?>>CREDIT</option>
+            <option value="DUAL" <?= ($active_pay_mode == 'DUAL') ? 'selected' : '' ?>>DUAL PAYMENT</option>
          </select>
       </div>
-      </div>
-   </div>
+
+      <!-- Payment Breakdown Fields -->
       <div class="row">
-         <div class="col-md-6"><div class="form-group-modern">
-            <label>CASH</label>
-            <input type="text" id="pay_cash" name="pay_cash" class="popup-input" placeholder="Enter CASH amount" disabled>
-         </div></div>
-         <div class="col-md-6"><div class="form-group-modern">
-            <label>UPI</label>
-            <input type="text" id="pay_upi" name="pay_upi" class="popup-input" placeholder="Enter UPI amount" disabled>
-         </div></div>
+         <div class="col-md-6">
+            <div class="form-group-modern" id="field_cash">
+               <label>CASH Amount</label>
+               <input type="text"
+                  class="popup-input"
+                  name="pay_cash"
+                  id="pay_cash"
+                  placeholder="Enter Cash Amount"
+                  value="<?= htmlspecialchars($pay_cash ?? '') ?>"
+                  disabled>
+            </div>
+         </div>
+         <div class="col-md-6">
+            <div class="form-group-modern" id="field_upi">
+               <label>UPI Amount</label>
+               <input type="text"
+                  class="popup-input"
+                  name="pay_upi"
+                  id="pay_upi"
+                  placeholder="Enter UPI Amount"
+                  value="<?= htmlspecialchars($pay_upi ?? '') ?>"
+                  disabled>
+            </div>
+         </div>
       </div>
       <div class="row">
-         <div class="col-md-6"><div class="form-group-modern">
-            <label>CARD</label>
-            <input type="text" id="pay_card" name="pay_card" class="popup-input" placeholder="Enter CARD amount" disabled>
-         </div></div>
-         <div class="col-md-6"><div class="form-group-modern">
-            <label>CREDIT</label>
-            <input type="text" id="pay_credit" name="pay_credit" class="popup-input" placeholder="Enter CREDIT amount" disabled>
-         </div></div>
+         <div class="col-md-6">
+            <div class="form-group-modern" id="field_card">
+               <label>CARD Amount</label>
+               <input type="text"
+                  class="popup-input"
+                  name="pay_card"
+                  id="pay_card"
+                  placeholder="Enter Card Amount"
+                  value="<?= htmlspecialchars($pay_card ?? '') ?>"
+                  disabled>
+            </div>
+         </div>
+         <div class="col-md-6">
+            <div class="form-group-modern" id="field_credit">
+               <label>CREDIT Amount</label>
+               <input type="text"
+                  class="popup-input"
+                  name="pay_credit"
+                  id="pay_credit"
+                  placeholder="Enter Credit Amount"
+                  value="<?= htmlspecialchars($pay_credit ?? '') ?>"
+                  disabled>
+            </div>
+         </div>
       </div>
+
+      <!-- RECEIPT PRINT FORMAT OPTION IN POPUP -->
+      <div style="margin: 10px 0 15px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px;">
+         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <span style="font-weight: 600; font-size: 13px; color: #334155;"><i class="fa fa-print" style="color: #009688; margin-right: 5px;"></i> Receipt Print Format:</span>
+            <span style="font-size: 11px; color: #64748b;">(For Save &amp; Print)</span>
+         </div>
+         <div style="display: flex; gap: 20px; align-items: center;">
+            <label class="radio-inline" style="font-weight: 500; font-size: 13px; color: #334155; margin: 0; cursor: pointer;">
+               <input type="radio" name="popup_print_option" value="80mm" checked onchange="syncPrintOption(this.value)"> 80 MM (Thermal)
+            </label>
+            <label class="radio-inline" style="font-weight: 500; font-size: 13px; color: #334155; margin: 0; cursor: pointer;">
+               <input type="radio" name="popup_print_option" value="a4" onchange="syncPrintOption(this.value)"> A4 (Standard)
+            </label>
+            <label class="radio-inline" style="font-weight: 500; font-size: 13px; color: #334155; margin: 0; cursor: pointer;">
+               <input type="radio" name="popup_print_option" value="a5" onchange="syncPrintOption(this.value)"> A5 (Compact)
+            </label>
+         </div>
+      </div>
+
+      <!-- BUTTONS -->
       <div class="popup-actions">
-         <button type="button" class="popup-btn cancel-btn" onclick="closePopupsave()">Cancel</button>
-         <button type="button" class="popup-btn save-btn" onclick="validateAndSubmitPopup('save')">Save</button>
-         <button type="button" class="popup-btn print-btn" onclick="validateAndSubmitPopup('print')" style="background: linear-gradient(135deg, #009688, #00796b); color: #fff;">Save &amp; Print</button>
+         <button type="button" class="popup-btn cancel-btn" onclick="closePopupsave()">
+            <i class="fa fa-times"></i> Cancel
+         </button>
+         <button type="button" class="popup-btn save-btn" onclick="validateAndSubmitPopup('save')">
+            <i class="fa <?= (!empty($bill_no) ? 'fa-save' : 'fa-check') ?>"></i>
+            <?= (!empty($bill_no) ? 'Update Bill' : 'Save Bill') ?>
+         </button>
+         <button type="button" class="popup-btn print-btn" onclick="validateAndSubmitPopup('print')">
+            <i class="fa fa-print"></i> Save &amp; Print
+         </button>
       </div>
    </div>
 </div>
@@ -1172,30 +1453,285 @@ while ($z = $szRes->fetch_assoc()) {
                      <div class="col-sm-6">
                         <div class="form-group">
                            <label>Barcode No</label>
-                           <input type="text" class="form-control" id="barcode_number" placeholder="Enter Barcode Number" autocomplete="offv">
+                           <input type="text" class="form-control" id="barcode_number" name="barcode_number" placeholder="Enter Barcode Number" autocomplete="off">
                         </div>
                      </div>
                      <div class="col-sm-6">
                         <div class="form-group">
                            <label>Article No</label>
-                           <input type="text" class="form-control" id="barcode_number" placeholder="Enter Barcode Number" autocomplete="offv">
+                           <input type="text" class="form-control" id="article_no" name="article_no" placeholder="Enter Article Number" autocomplete="off">
+                           <div id="suggestions_article_no" class="autocomplete-suggestions"></div>
                         </div>
                      </div>
-                     <!--<div class="col-sm-8">-->
-                     <!--   <div class="form-group">-->
-                     <!--      <label>Item Name</label>-->
-                     <!--      <input type="text" class="form-control" name="item_name" id="item_name" placeholder="Enter Brand Name" autocomplete="off">-->
-                     <!--      <div id="suggestions_item_name" class="autocomplete-suggestions"></div>-->
-                     <!--   </div>-->
-                     <!--</div>-->
                   </div>
                   <div class="row">
-                    
                      <div class="col-sm-12" style="margin-top:-15px;">
-                        <div class="form-group">
+                        <div class="form-group" style="position: relative; margin-bottom: 8px;">
                            <label>Item Name</label>
-                           <input type="text" class="form-control form" name="item_name" id="item_name" placeholder="Enter Brand Name" autocomplete="off">
+                           <div style="position: relative;">
+                              <i class="fa fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 14px; pointer-events: none; z-index: 2;"></i>
+                              <input type="text" class="form-control form" name="item_name" id="item_name" placeholder="Search or filter Item Name, Barcode, or Article No..." autocomplete="off" style="padding-left: 38px; height: 42px; border-radius: 8px; font-size: 14px;">
+                           </div>
                            <div id="suggestions_item_name" class="autocomplete-suggestions"></div>
+                        </div>
+                     </div>
+                  </div>
+
+                  <!-- Modern Item Cards Block -->
+                  <style>
+                     .item-card-block-wrapper {
+                        background: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 14px;
+                        padding: 14px 18px;
+                        margin-top: 4px;
+                        margin-bottom: 18px;
+                        box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+                     }
+                     .item-card-block-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 12px;
+                        padding-bottom: 8px;
+                        border-bottom: 1px solid #e2e8f0;
+                        flex-wrap: wrap;
+                        gap: 8px;
+                     }
+                     .item-card-block-header .block-badge {
+                        font-size: 14px;
+                        font-weight: 700;
+                        color: #1e293b;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                     }
+                     .item-card-block-header .block-subtitle {
+                        font-size: 12px;
+                        color: #64748b;
+                        margin-left: 6px;
+                     }
+                     .item-card-block-header .badge-counter {
+                        background: #e2e8f0;
+                        color: #334155;
+                        font-size: 12px;
+                        font-weight: 600;
+                        border-radius: 20px;
+                        padding: 4px 12px;
+                     }
+                     .item-cards-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+                        gap: 12px;
+                        max-height: 250px;
+                        overflow-y: auto;
+                        padding: 4px;
+                     }
+                     .item-cards-grid::-webkit-scrollbar {
+                        width: 6px;
+                     }
+                     .item-cards-grid::-webkit-scrollbar-thumb {
+                        background: #cbd5e1;
+                        border-radius: 4px;
+                     }
+                     .item-card-item {
+                        background: #ffffff;
+                        border: 1.5px solid #e2e8f0;
+                        border-radius: 12px;
+                        padding: 12px;
+                        cursor: pointer;
+                        transition: all 0.22s ease;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        user-select: none;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                     }
+                     .item-card-item:hover {
+                        border-color: #3b82f6;
+                        transform: translateY(-2px);
+                        box-shadow: 0 6px 14px rgba(59, 130, 246, 0.12);
+                     }
+                     .item-card-item:active {
+                        transform: scale(0.98);
+                     }
+                     .item-card-item.card-added-flash {
+                        border-color: #10b981 !important;
+                        background: #ecfdf5 !important;
+                        box-shadow: 0 0 12px rgba(16, 185, 129, 0.35) !important;
+                     }
+                     .card-item-top {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        gap: 8px;
+                        margin-bottom: 8px;
+                     }
+                     .card-item-name {
+                        font-weight: 700;
+                        font-size: 14px;
+                        color: #0f172a;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 145px;
+                     }
+                     .card-item-price {
+                        font-weight: 700;
+                        font-size: 14px;
+                        color: #059669;
+                        white-space: nowrap;
+                     }
+                     .card-item-meta {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 4px;
+                        font-size: 12px;
+                        color: #475569;
+                        margin-bottom: 10px;
+                     }
+                     .card-item-meta .meta-line {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 6px;
+                     }
+                     .card-item-meta .meta-label {
+                        color: #64748b;
+                        font-size: 11px;
+                     }
+                     .card-item-meta .meta-val {
+                        font-weight: 600;
+                        color: #1e293b;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 130px;
+                     }
+                     .card-item-bottom {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding-top: 8px;
+                        border-top: 1px dashed #e2e8f0;
+                        font-size: 11px;
+                     }
+                     .stock-badge {
+                        padding: 2px 7px;
+                        border-radius: 4px;
+                        font-weight: 600;
+                        font-size: 11px;
+                     }
+                     .stock-badge.stock-in {
+                        background: #dcfce7;
+                        color: #15803d;
+                     }
+                     .stock-badge.stock-low {
+                        background: #fee2e2;
+                        color: #b91c1c;
+                     }
+                     .click-to-add-btn {
+                        color: #2563eb;
+                        font-weight: 600;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 4px;
+                        font-size: 11px;
+                     }
+                     .item-card-item:hover .click-to-add-btn {
+                        color: #1d4ed8;
+                        text-decoration: underline;
+                     }
+                  </style>
+
+                  <div class="row">
+                     <div class="col-sm-12">
+                        <div class="item-card-block-wrapper">
+                           <div class="item-card-block-header">
+                              <div>
+                                 <span class="block-badge"><i class="fa fa-cubes text-primary"></i> Available Items</span>
+                                 <span class="block-subtitle">Click on any card to add into bill list</span>
+                              </div>
+                              <div>
+                                 <span class="badge badge-counter" id="itemCountBadge">Loading items...</span>
+                              </div>
+                           </div>
+                           <div class="item-cards-grid" id="itemCardsGrid">
+                              <?php
+                                 $cardsQuery = $db->select("
+                                    SELECT 
+                                       p.barcode_number,
+                                       MAX(p.article_no) AS article_no,
+                                       MAX(p.item_name) AS item_name,
+                                       MAX(p.sp) AS sp,
+                                       MAX(p.mrp) AS mrp,
+                                       MAX(p.category) AS category,
+                                       COALESCE((SELECT SUM(qty) FROM tbl_purchase WHERE barcode_number = p.barcode_number AND status = 'success'), 0)
+                                       - COALESCE((SELECT SUM(qty) FROM tbl_bill WHERE barcode_number = p.barcode_number), 0) AS total_qty
+                                    FROM tbl_purchase p
+                                    WHERE p.status = 'success' AND p.barcode_number IS NOT NULL AND p.barcode_number != ''
+                                    GROUP BY p.barcode_number
+                                    ORDER BY MAX(p.id) DESC
+                                 ");
+                                 $totalCardCount = 0;
+                                 if ($cardsQuery && $cardsQuery->num_rows() > 0) {
+                                    while ($card = $cardsQuery->fetch_assoc()) {
+                                       $totalCardCount++;
+                                       $cBar = htmlspecialchars($card['barcode_number']);
+                                       $cArt = htmlspecialchars($card['article_no'] ?? '');
+                                       $cNam = htmlspecialchars($card['item_name']);
+                                       $cSp  = (float)($card['sp'] ?? 0);
+                                       $cQty = (int)($card['total_qty'] ?? 0);
+                                       ?>
+                                       <div class="item-card-item"
+                                            data-barcode="<?= strtolower($cBar) ?>"
+                                            data-article="<?= strtolower($cArt) ?>"
+                                            data-name="<?= strtolower($cNam) ?>"
+                                            onclick="selectItemCard('<?= $cBar ?>', this)"
+                                            title="Click to add <?= $cNam ?> (Barcode: <?= $cBar ?>, Article: <?= $cArt ?>)">
+                                          <div class="card-item-top">
+                                             <span class="card-item-name" title="<?= $cNam ?>"><?= $cNam ?></span>
+                                             <span class="card-item-price">₹<?= number_format($cSp, 2) ?></span>
+                                          </div>
+                                          <div class="card-item-meta">
+                                             <div class="meta-line">
+                                                <span class="meta-label"><i class="fa fa-barcode"></i> Barcode:</span>
+                                                <span class="meta-val"><?= $cBar ?></span>
+                                             </div>
+                                             <div class="meta-line">
+                                                <span class="meta-label"><i class="fa fa-tag"></i> Article No:</span>
+                                                <span class="meta-val"><?= !empty($cArt) ? $cArt : '-' ?></span>
+                                             </div>
+                                          </div>
+                                          <div class="card-item-bottom">
+                                             <span class="stock-badge <?= $cQty > 0 ? 'stock-in' : 'stock-low' ?>">
+                                                Stock: <?= $cQty ?>
+                                             </span>
+                                             <span class="click-to-add-btn">
+                                                <i class="fa fa-plus-circle"></i> Add to List
+                                             </span>
+                                          </div>
+                                       </div>
+                                       <?php
+                                    }
+                                 } else {
+                                    ?>
+                                    <div class="text-center text-muted" style="padding: 16px; width: 100%;">
+                                       <i class="fa fa-info-circle"></i> No items available in inventory.
+                                    </div>
+                                    <?php
+                                 }
+                              ?>
+                           </div>
+                           <div id="noMatchMessage" style="display:none; padding:15px; text-align:center; color:#64748b; font-size:13px; width:100%;">
+                              <i class="fa fa-search"></i> No items matching search criteria.
+                           </div>
+                           <script>
+                              document.addEventListener('DOMContentLoaded', function() {
+                                 var b = document.getElementById('itemCountBadge');
+                                 if (b) b.textContent = '<?= $totalCardCount ?> Items Available';
+                               });
+                           </script>
                         </div>
                      </div>
                   </div>
@@ -1355,39 +1891,169 @@ while ($z = $szRes->fetch_assoc()) {
                         </tfoot>
                      </table>
                   </div>
-                  <div class="row">
-                  <div class="col-sm-2">
-                  <div class="form-group">
-                  <label>Discount %</label>
-                  <input type="text" class="form-control" name="percent_total_discount" id="percent_total_discount" placeholder="Enter Discount %" oninput="discountTotalPercent()" value="<?= $percent_total_discount ?? '' ?>">
-                  </div>
-                  </div>
-                  <div class="col-sm-2">
-                  <div class="form-group">
-                  <label>Discount Amt</label>
-                  <input type="text" class="form-control" name="discount_total_amount" id="discount_total_amount" placeholder="Enter Discount Amt" oninput="discountTotalAmount()" value="<?= $discount_total_amount ?? '' ?>">
-                  </div>
-                  </div>
-                  </div>
-                  <div class="row">
-                     <div class="col-sm-4">
-                        <div class="form-check">
-                           <label>Status</label><br>
-                           <label class="radio-inline">
-                           <input type="radio" name="status" value="success" checked="checked">Success</label>
-                           <label class="radio-inline"><input type="radio" name="status" value="hold">Hold</label>
-                           <label class="radio-inline"><input type="radio" name="status" value="hold">Show Hold</label>
-                        </div>
-                     </div>
-                     <div class="col-sm-8" style="text-align:right;">
-                        <div class="reset-button">
-                           <input type="hidden" name="submit" value="<?= (!empty($bill_no) ? 'update' : 'save') ?>">
-                           <button type="reset" name="submit" class="btn btn-warning" style="width:110px;">Reset</button>
-                           <a class="btn btn-danger" style="width:110px;" onclick="deleteRow('dataTable')">Row Remove</a>
-                           <button type="button" class="btn btn-success" onclick="openPopupsave()" id="confirmbtn" style="width:110px;background-color: #009688; color: white;"><?= (!empty($bill_no) ? 'Update' : 'Save') ?></button>
-                        </div>
-                     </div>
-                  </div>
+                   <div class="row">
+                      <div class="col-sm-4">
+                         <div class="form-group">
+                            <label>Invoice Pdf upload</label>
+                            <input type="file" name="picture" id="picture">
+                         </div>
+                      </div>
+                      <div class="col-sm-4"></div>
+                      <div class="col-sm-2">
+                         <div class="form-group">
+                            <label>Discount %</label>
+                            <input type="text" class="form-control" name="percent_total_discount" id="percent_total_discount" placeholder="Enter Discount %" oninput="discountTotalPercent()" value="<?= $percent_total_discount ?? '' ?>">
+                         </div>
+                      </div>
+                      <div class="col-sm-2">
+                         <div class="form-group">
+                            <label>Discount amount</label>
+                            <input type="text" class="form-control" name="discount_total_amount" id="discount_total_amount" placeholder="Enter Discount amount" oninput="discountTotalAmount()" value="<?= $discount_total_amount ?? '' ?>">
+                         </div>
+                      </div>
+                   </div>
+                   <div class="row">
+                   <!-- Modern Responsive Action Button Bar -->
+                   <style>
+                      .sale-action-bar {
+                         display: flex;
+                         align-items: center;
+                         justify-content: space-between;
+                         flex-wrap: wrap;
+                         gap: 16px;
+                         background: #f8fafc;
+                         padding: 16px 20px;
+                         border-radius: 16px;
+                         border: 1px solid #e2e8f0;
+                         margin-top: 15px;
+                      }
+                      .action-group-buttons {
+                         display: flex;
+                         align-items: center;
+                         gap: 10px;
+                         flex-wrap: wrap;
+                      }
+                      .btn-action-pill {
+                         border-radius: 50px;
+                         font-size: 14px;
+                         font-weight: 600;
+                         height: 42px;
+                         padding: 0 20px;
+                         display: inline-flex;
+                         align-items: center;
+                         justify-content: center;
+                         gap: 8px;
+                         border: none;
+                         transition: all 0.25s ease;
+                         cursor: pointer;
+                         box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+                      }
+                      .btn-action-pill:hover {
+                         transform: translateY(-2px);
+                         box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+                      }
+                      .btn-action-clear {
+                         background: #ffb300;
+                         color: #000;
+                      }
+                      .btn-action-clear:hover {
+                         background: #ffa000;
+                         color: #000;
+                      }
+                      .btn-action-remove {
+                         background: #e53935;
+                         color: #fff;
+                      }
+                      .btn-action-remove:hover {
+                         background: #d32f2f;
+                         color: #fff;
+                      }
+                      .action-option-box {
+                         display: flex;
+                         flex-direction: column;
+                         gap: 4px;
+                      }
+                      .action-option-box label.option-title {
+                         font-size: 12px;
+                         font-weight: 700;
+                         text-transform: uppercase;
+                         letter-spacing: 0.5px;
+                         color: #64748b;
+                         margin-bottom: 2px;
+                      }
+                      .action-option-radios {
+                         display: flex;
+                         align-items: center;
+                         gap: 12px;
+                         font-size: 13px;
+                         font-weight: 600;
+                         color: #334155;
+                      }
+                      .btn-submit-proceed {
+                         height: 46px;
+                         padding: 0 32px;
+                         border-radius: 50px;
+                         background: linear-gradient(135deg, #1e293b, #37475a);
+                         color: #ffffff;
+                         font-size: 16px;
+                         font-weight: 700;
+                         border: none;
+                         cursor: pointer;
+                         display: inline-flex;
+                         align-items: center;
+                         justify-content: center;
+                         gap: 10px;
+                         box-shadow: 0 4px 14px rgba(30,41,59,0.3);
+                         transition: all 0.25s ease;
+                      }
+                      .btn-submit-proceed:hover {
+                         background: linear-gradient(135deg, #0f172a, #1e293b);
+                         transform: translateY(-2px);
+                         box-shadow: 0 6px 18px rgba(15,23,42,0.4);
+                         color: #ffffff;
+                      }
+                   </style>
+                    <div class="sale-action-bar">
+                       <!-- Reset & Row Removal -->
+                       <div class="action-group-buttons">
+                          <button type="reset" class="btn-action-pill btn-action-clear">
+                             <i class="fa fa-undo"></i> Clear
+                          </button>
+                          <button type="button" class="btn-action-pill btn-action-remove" onclick="deleteRow('dataTable')">
+                             <i class="fa fa-trash"></i> Row Remove
+                          </button>
+                       </div>
+
+                       <!-- Status Radio Group -->
+                       <div class="action-option-box">
+                          <label class="option-title">Status</label>
+                          <div class="action-option-radios">
+                             <label class="radio-inline"><input type="radio" name="status" value="success" <?= ($status ?? 'success') == 'success' ? 'checked="checked"' : '' ?>> Success</label>
+                             <label class="radio-inline"><input type="radio" name="status" value="hold" <?= ($status ?? '') == 'hold' ? 'checked="checked"' : '' ?>> Hold</label>
+                          </div>
+                       </div>
+
+                       <!-- Receipt Print Option Radio Group -->
+                       <div class="action-option-box">
+                          <label class="option-title">Receipt Print Option</label>
+                          <div class="action-option-radios">
+                             <label class="radio-inline"><input type="radio" name="print_option" value="80mm" checked="checked"> 80 MM</label>
+                             <label class="radio-inline"><input type="radio" name="print_option" value="a4"> A4</label>
+                             <label class="radio-inline"><input type="radio" name="print_option" value="a5"> A5</label>
+                          </div>
+                       </div>
+
+                       <!-- Primary Action Submit Button -->
+                       <div>
+                          <input type="hidden" name="submit" value="<?= (!empty($bill_no) ? 'update' : 'save') ?>">
+                          <button type="button" class="btn-submit-proceed" onclick="openPopupsave()" id="confirmbtn">
+                             <i class="fa <?= (!empty($bill_no) ? 'fa-save' : 'fa-paper-plane') ?>"></i>
+                             <?= (!empty($bill_no) ? 'Update Bill' : 'Bill Proceed') ?>
+                          </button>
+                       </div>
+                    </div>
+                   <br>
+                   </div>
                   
                   <!-- Hidden field for Save and Print option -->
                   <input type="hidden" name="is_print" id="is_print_hidden" value="0">
@@ -1465,7 +2131,7 @@ while ($z = $szRes->fetch_assoc()) {
                         <input type="hidden" name="sortField" value="id" />
                         <div class="input-group search-box-group">
                            <input type="text" class="form-control search-input search-input-field" name="search" id="company_name" placeholder="Search Recent Sales..." autocomplete="off">
-                           <span class="input-group-addon search-addon-btn">
+                           <span class="input-group-addon search-addon-btn" id="saleSearchBtn" onclick="doSaleSearch()" style="cursor: pointer;" title="Click to search">
                               <i class="fa fa-search search-icon-sm"></i>
                            </span>
                         </div>
@@ -1540,7 +2206,10 @@ while ($z = $szRes->fetch_assoc()) {
 </form>
 
 <?php include('include/footer-2.php'); ?>
-<script src="assets/dist/js/page/sale-creation.js?v2" type="text/javascript"></script>
+<script>
+   var DEFAULT_PAYMENT_MODE = <?= json_encode($active_pay_mode ?? $default_pay_mode ?? 'CASH') ?>;
+</script>
+<script src="assets/dist/js/page/sale-creation.js?v=<?= time(); ?>" type="text/javascript"></script>
 <script>
    const filterBtn = document.getElementById("filterToggle");
    const closeBtn = document.getElementById("closePanel");
@@ -1569,18 +2238,22 @@ while ($z = $szRes->fetch_assoc()) {
 
 <?php 
 $print_bill_no = '';
+$print_size = '80mm';
 if (!empty($_SESSION['print_bill_no'])) {
     $print_bill_no = $_SESSION['print_bill_no'];
-    unset($_SESSION['print_bill_no']);
+    $print_size = $_SESSION['print_option'] ?? '80mm';
+    unset($_SESSION['print_bill_no'], $_SESSION['print_option']);
 } else if (!empty($_GET['print_bill'])) {
     $print_bill_no = $_GET['print_bill'];
+    $print_size = $_GET['print_option'] ?? ($_GET['size'] ?? '80mm');
 } else if (isset($_GET['print']) && $_GET['print'] == '1' && !empty($bill_no)) {
     $print_bill_no = $bill_no;
+    $print_size = $_GET['print_option'] ?? ($_GET['size'] ?? '80mm');
 }
 
 if (!empty($print_bill_no)): 
 ?>
-<iframe id="print_frame" src="bill-invoice.php?type=sale&bill_no=<?= urlencode($print_bill_no) ?>" style="width:0;height:0;border:0;position:absolute;left:-9999px;"></iframe>
+<iframe id="print_frame" src="bill-invoice?type=sale&bill_no=<?= urlencode($print_bill_no) ?>&size=<?= urlencode($print_size) ?>" style="position:fixed;right:100%;bottom:100%;width:900px;height:900px;border:0;opacity:0;pointer-events:none;"></iframe>
 <script>
 window.addEventListener('DOMContentLoaded', function() {
     // Strip print parameters from URL so manual F5/refresh won't re-trigger print
@@ -1589,6 +2262,8 @@ window.addEventListener('DOMContentLoaded', function() {
         if (url.searchParams.has('print') || url.searchParams.has('print_bill')) {
             url.searchParams.delete('print');
             url.searchParams.delete('print_bill');
+            url.searchParams.delete('size');
+            url.searchParams.delete('print_option');
             var newSearch = url.searchParams.toString();
             window.history.replaceState({}, document.title, url.pathname + (newSearch ? '?' + newSearch : ''));
         }
@@ -1602,9 +2277,9 @@ window.addEventListener('DOMContentLoaded', function() {
                     iframe.contentWindow.focus();
                     iframe.contentWindow.print();
                 } catch(e) {
-                    console.error(e);
+                    console.error('Print error:', e);
                 }
-            }, 300);
+            }, 350);
         };
     }
 });

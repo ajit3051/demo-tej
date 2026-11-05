@@ -84,7 +84,7 @@ if(isset($_GET['delete_id']))
                                  <thead>
                                     <tr class="info">
                                        <th class="th-width-40-center">#</th>
-                                       <th class="th-minwidth-100-center">Action</th>
+                                       <th style="min-width: 175px; text-align: center;">Action</th>
                                        <th class="text-center-align">Status</th>
                                        <th>Account Code</th>
                                        <th>Account Name</th>
@@ -121,6 +121,9 @@ if(isset($_GET['delete_id']))
                                        <td class="td-center-middle-nowrap">
                                           <a class="btn btn-info btn-xs" data-toggle="tooltip" title="Edit Account" href="fh_accountmastercreation.php?update_id=<?php echo $user['id']; ?>">
                                              <i class="fa fa-pencil"></i> Edit
+                                          </a>
+                                          <a class="btn btn-warning btn-xs" data-toggle="tooltip" title="View Ledger" href="fh_account_ledger.php?account_code=<?php echo urlencode($user['account_code'] ?? ''); ?>&account_id=<?php echo $user['id']; ?>">
+                                             <i class="fa fa-book"></i> Ledger
                                           </a>
                                           <a class="btn btn-danger btn-xs" data-toggle="tooltip" title="Delete Account" href="fh_accountmastercreation_list.php?delete_id=<?php echo $user['id']; ?>" onclick="return confirm('Are you sure you want to delete this record?');">
                                              <i class="fa fa-trash-o"></i> Delete

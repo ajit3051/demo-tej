@@ -20,9 +20,9 @@ $params = '';
 $fields = array();
 
 if ($exportType) {
-   $columns = 'ANY_VALUE(purchage_date) as purchage_date, bill_number, ANY_VALUE(invoice_number) as invoice_number, ANY_VALUE(account_name) as account_name, ANY_VALUE(gst_type) as gst_type, SUM(qty) as qty, SUM(CAST(gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(amount AS DECIMAL(10,2))) as amount, ANY_VALUE(status) as status';
+   $columns = 'MAX(purchage_date) as purchage_date, bill_number, MAX(invoice_number) as invoice_number, MAX(account_name) as account_name, MAX(gst_type) as gst_type, SUM(qty) as qty, SUM(CAST(gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(amount AS DECIMAL(10,2))) as amount, MAX(status) as status';
 } else {
-   $columns = 'ANY_VALUE(id) as id, ANY_VALUE(purchage_date) as purchage_date, bill_number, ANY_VALUE(invoice_number) as invoice_number, ANY_VALUE(account_name) as account_name, ANY_VALUE(gst_type) as gst_type, SUM(qty) as qty, SUM(CAST(gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(amount AS DECIMAL(10,2))) as amount, ANY_VALUE(status) as status';
+   $columns = 'MAX(id) as id, MAX(purchage_date) as purchage_date, bill_number, MAX(invoice_number) as invoice_number, MAX(account_name) as account_name, MAX(gst_type) as gst_type, SUM(qty) as qty, SUM(CAST(gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(amount AS DECIMAL(10,2))) as amount, MAX(status) as status';
 }
 
 $query = "SELECT $columns FROM tbl_purchase WHERE id > 0";

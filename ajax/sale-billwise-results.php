@@ -20,9 +20,9 @@ $params = '';
 $fields = array();
 
 if ($exportType) {
-   $columns = 'ANY_VALUE(TB.purchage_date) as purchage_date, TB.bill_number, ANY_VALUE(TB.pay_mode) as pay_mode, ANY_VALUE(TB.account_name) as account_name, ANY_VALUE(TB.gst_type) as gst_type, SUM(TB.qty) as qty, SUM(CAST(TB.rate AS DECIMAL(10,2))) as rate, SUM(CAST(TB.gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(TB.amount AS DECIMAL(10,2))) as amount, ANY_VALUE(TB.status) as status, COALESCE(ANY_VALUE(TPM.paymode_name), ANY_VALUE(TB.pay_mode)) as paymode_name';
+   $columns = 'MAX(TB.purchage_date) as purchage_date, TB.bill_number, MAX(TB.pay_mode) as pay_mode, MAX(TB.account_name) as account_name, MAX(TB.gst_type) as gst_type, SUM(TB.qty) as qty, SUM(CAST(TB.rate AS DECIMAL(10,2))) as rate, SUM(CAST(TB.gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(TB.amount AS DECIMAL(10,2))) as amount, MAX(TB.status) as status, COALESCE(MAX(TPM.paymode_name), MAX(TB.pay_mode)) as paymode_name';
 } else {
-   $columns = 'ANY_VALUE(TB.id) as id, ANY_VALUE(TB.purchage_date) as purchage_date, TB.bill_number, ANY_VALUE(TB.pay_mode) as pay_mode, ANY_VALUE(TB.account_name) as account_name, ANY_VALUE(TB.gst_type) as gst_type, SUM(TB.qty) as qty, SUM(CAST(TB.rate AS DECIMAL(10,2))) as rate, SUM(CAST(TB.gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(TB.amount AS DECIMAL(10,2))) as amount, ANY_VALUE(TB.status) as status, COALESCE(ANY_VALUE(TPM.paymode_name), ANY_VALUE(TB.pay_mode)) as paymode_name';
+   $columns = 'MAX(TB.id) as id, MAX(TB.purchage_date) as purchage_date, TB.bill_number, MAX(TB.pay_mode) as pay_mode, MAX(TB.account_name) as account_name, MAX(TB.gst_type) as gst_type, SUM(TB.qty) as qty, SUM(CAST(TB.rate AS DECIMAL(10,2))) as rate, SUM(CAST(TB.gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(TB.amount AS DECIMAL(10,2))) as amount, MAX(TB.status) as status, COALESCE(MAX(TPM.paymode_name), MAX(TB.pay_mode)) as paymode_name';
 }
 
 $query = "SELECT $columns FROM tbl_bill as TB LEFT JOIN tbl_paymode_master as TPM ON (TPM.paymode_code = TB.pay_mode OR TPM.paymode_name = TB.pay_mode) WHERE TB.id > 0";

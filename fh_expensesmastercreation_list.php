@@ -73,7 +73,7 @@ if(isset($_GET['delete_id']))
                                     <input type="hidden" name="page" id="page" value="1">
                                     <div class="input-group search-box-group">
                                        <input type="text" class="form-control search-input search-input-field" name="search" id="company_name" placeholder="Search Expenses..." autocomplete="off">
-                                       <span class="input-group-addon search-addon-btn">
+                                       <span class="input-group-addon search-addon-btn" id="expensesMasterSearchBtn" style="cursor: pointer;" title="Click to search">
                                           <i class="fa fa-search search-icon-sm"></i>
                                        </span>
                                     </div>

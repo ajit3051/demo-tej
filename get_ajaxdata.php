@@ -6,10 +6,10 @@ $validationHelper = new validation();
 // ini_set('display_errors', 1);
 // error_reporting(E_ALL);
 
-if($function=='setPerpageValue'){
-	
-    $_SESSION["_RECORDPERPAGE_"] = $_GET['selectedval']; die;
+if ($function == 'setPerpageValue') {
 
+    $_SESSION["_RECORDPERPAGE_"] = $_GET['selectedval'];
+    die;
 } else if ($function == 'get_account_details') {
 
     $type = $_POST['type'];
@@ -19,7 +19,7 @@ if($function=='setPerpageValue'){
     $fields = array();
 
     $db = connect();
-    
+
     $query = "SELECT * FROM tbl_account_master WHERE id > 0";
     if ($type == 'mobile') {
 
@@ -85,7 +85,6 @@ if($function=='setPerpageValue'){
                     'mobile_no'    => $row['mobile_no_1'],
                 ];
             }
-            
         }
 
         echo json_encode(array('status' => true, 'suggestions' => $suggestions));
@@ -151,7 +150,6 @@ if($function=='setPerpageValue'){
             } else {
                 $suggestions[$row['id']] = $row['item_name'] . ', ' . $row['description'] . ', ' . $row['barcode_no'] . ', ' . $row['mrp'];
             }
-            
         }
 
         echo json_encode(array('status' => true, 'suggestions' => $suggestions));
@@ -210,7 +208,6 @@ if($function=='setPerpageValue'){
             } else {
                 $suggestions[$row['id']] = $row['item_name'] . ', ' . $row['category'] . ', ' . $row['barcode_number'] . ', ' . $row['rate'];
             }
-            
         }
 
         echo json_encode(array('status' => true, 'suggestions' => $suggestions));
@@ -227,38 +224,41 @@ if($function=='setPerpageValue'){
     $gst_type = $validationHelper->filterText($_POST['gst_type']);
     $under_gst = $validationHelper->filterText($_POST['under_gst']);
     $trcount = $validationHelper->filterText($_POST['trcount']);
-    $barcode = $validationHelper->filterText($_POST['barcode']);
-    $query = $db->select("SELECT * FROM tbl_item_master WHERE barcode_no =? AND status=?", 'ss', $barcode, 'true');
-  
+    $barcode = $validationHelper->filterText($_POST['barcode'] ?? '');
+    $itemId  = (int)($_POST['item_id'] ?? 0);
+    if ($itemId > 0) {
+        $query = $db->select("SELECT * FROM tbl_item_master WHERE id =? AND status=?", 'is', $itemId, 'true');
+    } else {
+        $query = $db->select("SELECT * FROM tbl_item_master WHERE barcode_no =? AND status=?", 'ss', $barcode, 'true');
+    }
+
     $row = $query->fetch_assoc();
-    $count = $query->num_rows; 
+    $count = $query->num_rows;
 
 
     // Gst % from gst master
     $gst_per = 0.0;
-    
+
     if (!empty($row['group_name'])) {
         $gst_query = $db->select("SELECT * FROM tbl_gst_master WHERE group_name = ? AND status = ?", 'ss', $row['group_name'], 'true');
-     
+
         if ($gst_query && $gst_row = $gst_query->fetch_assoc()) {
             $gst_per = (float) $gst_row['gst_per'];
         }
     }
-   $net_price = $row['purchase_price'];
+    $net_price = $row['purchase_price'];
     if ($gst_type == 'Inclusive') {
         $net_price = (float) $net_price;
-        
-        
+
+
         $gst_amount_temp = ($net_price * $gst_per) / (100 + $gst_per);
         $gst_amount = sprintf('%0.2f', $gst_amount_temp);
         $amount = sprintf('%0.2f', $net_price);
-    
     } else if ($gst_type == 'Exclusive') {
         $net_price = (float) $net_price;
-    
+
         $gst_amount = sprintf('%0.2f', $net_price * $gst_per / 100);
         $amount = sprintf('%0.2f', $net_price + $gst_amount);
-    
     } else {
         $gst_amount = '0.00';
         $amount = sprintf('%0.2f', (float) $net_price);
@@ -266,19 +266,21 @@ if($function=='setPerpageValue'){
 
     $taxable_amount = $amount - $gst_amount;
 
-    
-    if($under_gst == 'Local'){
+
+    if ($under_gst == 'Local') {
         $gstdevide = getGSTValueBygstType($gst_per);
-        $gstTitle = "CGST: ".$gstdevide."%, SGST: ".$gstdevide."%";
-     } else {
-        $gstTitle = "IGST: ".$gst_per."%";
-     }
+        $gstTitle = "CGST: " . $gstdevide . "%, SGST: " . $gstdevide . "%";
+    } else {
+        $gstTitle = "IGST: " . $gst_per . "%";
+    }
 
     if ($count > 0) {
-        $html .= '<tr id="row_' . $barcode . '">';
+        $barcodeVal = $row['barcode_no'] ?? '';
+        $rowKey = !empty($barcodeVal) ? $barcodeVal : ('item_' . $row['id']);
+        $html .= '<tr id="row_' . $rowKey . '">';
         $html .= '<td><input type="hidden" id="' . $row['id'] . '" name="item_id[]" value="" /><div class="checkbox checkbox-info" style="display:flex;align-items:center;gap:6px;"><input id="chk_' . ((int)$trcount + 1) . '" type="checkbox" name="chk[]" class="chk-box" value=""/><label class="s_no" for="chk_' . ((int)$trcount + 1) . '"></label><button type="button" class="row-delete-btn" onclick="deleteTableRow(this)" title="Delete Row"><i class="fa fa-trash"></i></button></div></td>';
         $html .= '<td>' . ((int)$trcount + 1) . '</td>';
-        $html .= '<td><input type="text" class="form-control" value="' . ($row['barcode_no'] ?? '') . '" name="barcode_no[]" required readonly></td>';
+        $html .= '<td><input type="text" class="form-control" value="' . ($row['barcode_no'] ?? '') . '" name="barcode_no[]" readonly placeholder="Auto-generate"></td>';
         $html .= '<td><input type="text" class="form-control" value="' . ($row['sku_no'] ?? '') . '" name="article_no[]" required readonly></td>';
         $html .= '<td><input type="text" class="form-control" value="' . ($row['item_name'] ?? '') . '" name="item_name[]" required readonly><input type="hidden" class="form-control" value="' . ($row['item_type'] ?? $row['iten_type'] ?? '') . '" name="item_type[]" required readonly></td>';
         $html .= '<td class="group-td"><div style="display:flex;gap:6px;align-items:center;"><input type="text" class="form-control group-category-display" value="' . ($row['group_name'] ?? $row['group_name'] ?? '') . '" name="category[]" readonly><button type="button" class="plus-btn" onclick="openPopup(this)" title="Add Group Details"><i class="fa fa-plus"></i></button></div><input type="hidden" name="sub_category[]" value=""><input type="hidden" name="brand[]" value=""><input type="hidden" name="color[]" value=""><input type="hidden" name="style[]" value=""></td>';
@@ -296,19 +298,32 @@ if($function=='setPerpageValue'){
         $html .= '</tr>';
 
 
-        echo json_encode(array('status' => true, 'html' => $html, 'id' => $row['id'], 'barcode_no' => $barcode));
+        echo json_encode(array('status' => true, 'html' => $html, 'id' => $row['id'], 'barcode_no' => $barcodeVal, 'row_key' => $rowKey));
     } else {
         echo json_encode(array('status' => false, 'message' => ''));
     }
-} else if ($function == 'get_purchage_info') {
+} else if ($function == 'get_purchage_info' || $function == 'get_purchage_info_by_sku') {
 
     $db = connect();
 
     $html = "";
-    $gst_type = $validationHelper->filterText($_POST['gst_type']);
-    $under_gst = $validationHelper->filterText($_POST['under_gst']);
-    $trcount = $validationHelper->filterText($_POST['trcount']);
-    $barcode = $validationHelper->filterText($_POST['barcode']);
+    $gst_type = $validationHelper->filterText($_POST['gst_type'] ?? 'Inclusive');
+    $under_gst = $validationHelper->filterText($_POST['under_gst'] ?? 'Local');
+    $trcount = $validationHelper->filterText($_POST['trcount'] ?? 0);
+    $barcode = $validationHelper->filterText($_POST['barcode'] ?? '');
+    $sku = $validationHelper->filterText($_POST['sku'] ?? '');
+
+    if (empty($barcode) && !empty($sku)) {
+        $skuQuery = $db->select("SELECT barcode_number FROM tbl_purchase WHERE article_no = ? AND status = 'success' LIMIT 1", 's', $sku);
+        if ($skuQuery && $skuRow = $skuQuery->fetch_assoc()) {
+            $barcode = $skuRow['barcode_number'];
+        } else {
+            $imSkuQuery = $db->select("SELECT barcode_no FROM tbl_item_master WHERE sku_no = ? AND status = 'true' LIMIT 1", 's', $sku);
+            if ($imSkuQuery && $imSkuRow = $imSkuQuery->fetch_assoc()) {
+                $barcode = $imSkuRow['barcode_no'];
+            }
+        }
+    }
 
     $query = $db->select(
         "SELECT p.*, 
@@ -317,26 +332,53 @@ if($function=='setPerpageValue'){
         FROM tbl_purchase p 
         WHERE p.barcode_number = ? AND p.status = ?",
         'sssss',
-        $barcode, 'success',
         $barcode,
-        $barcode, 'success'
+        'success',
+        $barcode,
+        $barcode,
+        'success'
     );
 
     $row = $query->fetch_assoc();
 
-    if ($row && $row['id'] > 0) {
+    if (!$row || empty($row['id'])) {
+        $imQuery = $db->select("SELECT * FROM tbl_item_master WHERE barcode_no = ? AND status = 'true' LIMIT 1", 's', $barcode);
+        if ($imQuery && $imRow = $imQuery->fetch_assoc()) {
+            $row = [
+                'id' => $imRow['id'],
+                'item_name' => $imRow['item_name'],
+                'barcode_number' => $imRow['barcode_no'],
+                'article_no' => $imRow['sku_no'],
+                'item_type' => $imRow['item_type'] ?? '',
+                'group_name' => $imRow['group_name'] ?? '',
+                'subgroup' => $imRow['subgroup_name'] ?? '',
+                'brand' => $imRow['brand_name'] ?? '',
+                'color' => $imRow['color_name'] ?? '',
+                'size' => $imRow['size_name'] ?? '',
+                'style' => $imRow['style_name'] ?? '',
+                'mou_name' => $imRow['mou_name'] ?? '',
+                'purchase_price' => $imRow['purchase_price'] ?? '0',
+                'sp' => $imRow['sp'] ?? $imRow['purchase_price'] ?? '0',
+                'gst' => $imRow['gst_per'] ?? '0',
+                'total_qty' => 0
+            ];
+        }
+    }
+
+    if ($row && !empty($row['barcode_number'])) {
         $net_price = $row['purchase_price'];
+        $sp = $row['sp'];
 
         if ($gst_type == 'Inclusive') {
-            $gst_amount_temp = ($net_price * $row['gst']) / (100 + $row['gst']);
+            $gst_amount_temp = ($sp * $row['gst']) / (100 + $row['gst']);
             $gst_amount = sprintf('%0.2f', $gst_amount_temp);
-            $amount = sprintf('%0.2f', $net_price);
+            $amount = sprintf('%0.2f', $sp);
         } else if ($gst_type == 'Exclusive') {
-            $gst_amount = sprintf('%0.2f', $net_price * $row['gst'] / 100);
-            $amount = sprintf('%0.2f', $net_price + $gst_amount);
+            $gst_amount = sprintf('%0.2f', $sp * $row['gst'] / 100);
+            $amount = sprintf('%0.2f', $sp + $gst_amount);
         } else {
             $gst_amount = sprintf('%0.2f', 0);
-            $amount = sprintf('%0.2f', $net_price);
+            $amount = sprintf('%0.2f', $sp);
         }
 
         $taxable_amount = sprintf('%0.2f', $amount - $gst_amount);
@@ -351,12 +393,12 @@ if($function=='setPerpageValue'){
 
         $trIndex = (int)$trcount + 1;
 
-        $html .= '<tr id="row_' . $row['id'] . '"  data-barcode="'. htmlspecialchars($row['barcode_number']) .'">';
+        $html .= '<tr id="row_' . $row['id'] . '"  data-barcode="' . htmlspecialchars($row['barcode_number']) . '">';
         $html .= '<td><input type="hidden" name="item_id[]" value="" /><div class="checkbox checkbox-info"><input id="chk_' . $trIndex . '" type="checkbox" name="chk[]" class="chk-box" value=""/> <button type="button" class="row-delete-btn" onclick="deleteTableRow(this)" title="Delete Row"><i class="fa fa-trash"></i></button></div></td>';
         $html .= '<td><label class="s_no" for="chk_' . $trIndex . '">' . $trIndex . '</label></td>';
-        $html .= '<td><input type="text" class="form-control" value="' . $row['barcode_number'] . '" name="barcode_no[]" required readonly></td>';
+        $html .= '<td><input type="text" class="form-control" value="' . $row['barcode_number'] . '" name="barcode_no[]" readonly placeholder="Auto-generate"></td>';
         $html .= '<td><input type="text" class="form-control" value="' . ($row['article_no'] ?? '') . '" name="article_no[]" required readonly></td>';
-        
+
         // Add hidden inputs to store the selected modal options per row
         $html .= '<td>';
         $html .= '<div style="display:flex;gap:6px;align-items:center;">';
@@ -368,7 +410,7 @@ if($function=='setPerpageValue'){
         $html .= '  <input type="hidden" class="row-color" name="color[]" value="' . htmlspecialchars($color_val) . '">';
         $html .= '  <input type="hidden" class="row-size" name="size[]" value="' . htmlspecialchars($size_val) . '">';
         $html .= '  <input type="hidden" class="row-style" name="style[]" value="' . htmlspecialchars($style_val) . '">';
-        
+
         // Attach current row data to button via data attributes
         $html .= '  <button type="button" class="plus-btn" ';
         $html .= '          data-id="' . $row['id'] . '" ';
@@ -399,7 +441,7 @@ if($function=='setPerpageValue'){
         $html .= '<input type="text" value="' . ($row['sp'] ?? '') . '" class="form-control selling_price" id="selling_price_' . $row['id'] . '" name="selling_price[]" readonly>';
         $html .= '<button type="button" class="plus-btn" onclick="openPopupsp(this)" title="Edit MRP"><i class="fa fa-plus"></i></button>';
         $html .= '</div></td>';
-        $html .= '<td><input type="text" value="' . $net_price . '" class="form-control net_array" id="net_price_' . $row['id'] . '" name="net_price[]" required readonly></td>';
+        $html .= '<td><input type="text" value="' . $sp . '" class="form-control net_array" id="net_price_' . $row['id'] . '" name="net_price[]" required readonly></td>';
         $html .= '<td><input type="hidden" class="form-control gst_array" id="gst_' . $row['id'] . '" value="' . ($row['gst'] ?? '') . '" name="gst[]" readonly data-toggle="tooltip">
         <input type="text" value="' . $gst_amount . '" class="form-control gstval" id="gst_amount_' . $row['id'] . '" name="gst_amount[]" required readonly></td>';
         $html .= '<td><input type="text" value="' . $taxable_amount . '" class="form-control taxable_amount" id="taxable_amount' . $row['id'] . '" name="taxable_amount[]" required readonly></td>';
@@ -436,7 +478,6 @@ if($function=='setPerpageValue'){
     }
 
     $db->close();
-
 } else if ($function == 'get_item_info_by_sku') {
 
     $db = connect();
@@ -479,11 +520,12 @@ if($function=='setPerpageValue'){
         $gstTitle = "IGST: " . $row['gst_per'] . "%";
     }
 
-    $barcode = $row['barcode_no'];
-    $html  = '<tr id="row_' . $barcode . '">';
+    $barcode = $row['barcode_no'] ?? '';
+    $rowKey = !empty($barcode) ? $barcode : ('item_' . $row['id']);
+    $html  = '<tr id="row_' . $rowKey . '">';
     $html .= '<td><input type="hidden" id="' . $row['id'] . '" name="item_id[]" value="" /><div class="checkbox checkbox-info" style="display:flex;align-items:center;gap:6px;"><input id="chk_' . ((int)$trcount + 1) . '" type="checkbox" name="chk[]" class="chk-box" value=""/><label class="s_no" for="chk_' . ((int)$trcount + 1) . '"></label><button type="button" class="row-delete-btn" onclick="deleteTableRow(this)" title="Delete Row"><i class="fa fa-trash"></i></button></div></td>';
     $html .= '<td>' . ((int)$trcount + 1) . '</td>';
-    $html .= '<td><input type="text" class="form-control" value="' . ($row['barcode_no'] ?? '') . '" name="barcode_no[]" required readonly></td>';
+    $html .= '<td><input type="text" class="form-control" value="' . ($row['barcode_no'] ?? '') . '" name="barcode_no[]" readonly placeholder="Auto-generate"></td>';
     $html .= '<td><input type="text" class="form-control" value="' . ($row['sku_no'] ?? '') . '" name="article_no[]" required readonly></td>';
     $html .= '<td><input type="text" class="form-control" value="' . ($row['item_name'] ?? '') . '" name="item_name[]" required readonly><input type="hidden" class="form-control" value="' . ($row['item_type'] ?? '') . '" name="item_type[]" required readonly></td>';
     $html .= '<td class="group-td"><div style="display:flex;gap:6px;align-items:center;"><input type="text" class="form-control group-category-display" value="' . ($row['group_name'] ?? '') . '" name="category[]" readonly><button type="button" class="plus-btn" onclick="openPopup(this)" title="Add Group Details"><i class="fa fa-plus"></i></button></div><input type="hidden" name="sub_category[]" value=""><input type="hidden" name="brand[]" value=""><input type="hidden" name="color[]" value=""><input type="hidden" name="style[]" value=""></td>';
@@ -501,22 +543,25 @@ if($function=='setPerpageValue'){
     $html .= '<td><input type="text" value="' . $amount . '" class="form-control amount_array" id="amount' . $row['id'] . '" name="amount[]" required readonly></td>';
     $html .= '</tr>';
 
-    echo json_encode(['status' => true, 'html' => $html, 'id' => $row['id'], 'barcode_no' => $barcode]);
-
+    echo json_encode(['status' => true, 'html' => $html, 'id' => $row['id'], 'barcode_no' => $barcode, 'row_key' => $rowKey]);
 } else if ($function == 'get_purchase_item_details') {
     $db = connect();
     $id = (int)($_POST['id'] ?? 0);
     $barcode = trim($_POST['barcode'] ?? '');
-    
+
     $row = null;
     if ($id > 0) {
         $stmt = $db->select("SELECT * FROM tbl_purchase WHERE id = ?", 'i', array($id));
-        if ($stmt && $stmt->num_rows() > 0) { $row = $stmt->fetch_assoc(); }
+        if ($stmt && $stmt->num_rows() > 0) {
+            $row = $stmt->fetch_assoc();
+        }
     } else if ($barcode !== '') {
         $stmt = $db->select("SELECT * FROM tbl_purchase WHERE barcode_number = ? LIMIT 1", 's', array($barcode));
-        if ($stmt && $stmt->num_rows() > 0) { $row = $stmt->fetch_assoc(); }
+        if ($stmt && $stmt->num_rows() > 0) {
+            $row = $stmt->fetch_assoc();
+        }
     }
-    
+
     if ($row) {
         echo json_encode(['status' => true, 'data' => $row]);
     } else {
@@ -530,7 +575,7 @@ if($function=='setPerpageValue'){
     $store_id = (int)($_POST['store_id'] ?? 0);
     $barcode_number = trim($_POST['barcode_number'] ?? '');
     $item_name = trim($_POST['item_name'] ?? '');
-    
+
     if ($stock_qty <= 0) {
         echo json_encode(['status' => false, 'message' => 'Please enter a valid stock quantity']);
         exit;
@@ -539,29 +584,35 @@ if($function=='setPerpageValue'){
         echo json_encode(['status' => false, 'message' => 'Please select a target store']);
         exit;
     }
-    
+
     // Fetch store details
     $store_name = '';
     $s_stmt = $db->select("SELECT store_name FROM tbl_store_master WHERE id = ? LIMIT 1", 'i', array($store_id));
     if ($s_stmt && $s_row = $s_stmt->fetch_assoc()) {
         $store_name = $s_row['store_name'];
     }
-    
+
     // Fetch purchase record
     $purch_row = null;
     if ($purchase_id > 0) {
         $p_stmt = $db->select("SELECT * FROM tbl_purchase WHERE id = ? LIMIT 1", 'i', array($purchase_id));
-        if ($p_stmt && $p_stmt->num_rows() > 0) { $purch_row = $p_stmt->fetch_assoc(); }
+        if ($p_stmt && $p_stmt->num_rows() > 0) {
+            $purch_row = $p_stmt->fetch_assoc();
+        }
     }
     if (!$purch_row && $barcode_number !== '') {
         $p_stmt = $db->select("SELECT * FROM tbl_purchase WHERE barcode_number = ? LIMIT 1", 's', array($barcode_number));
-        if ($p_stmt && $p_stmt->num_rows() > 0) { $purch_row = $p_stmt->fetch_assoc(); }
+        if ($p_stmt && $p_stmt->num_rows() > 0) {
+            $purch_row = $p_stmt->fetch_assoc();
+        }
     }
     if (!$purch_row && $item_name !== '') {
         $p_stmt = $db->select("SELECT * FROM tbl_purchase WHERE item_name = ? LIMIT 1", 's', array($item_name));
-        if ($p_stmt && $p_stmt->num_rows() > 0) { $purch_row = $p_stmt->fetch_assoc(); }
+        if ($p_stmt && $p_stmt->num_rows() > 0) {
+            $purch_row = $p_stmt->fetch_assoc();
+        }
     }
-    
+
     if (!$purch_row) {
         echo json_encode(['status' => false, 'message' => 'Purchase record not found']);
         exit;
@@ -576,7 +627,7 @@ if($function=='setPerpageValue'){
         echo json_encode(['status' => false, 'message' => "Transfer quantity ($stock_qty) cannot exceed available purchase quantity ($current_qty)"]);
         exit;
     }
-    
+
     $bill_number = $purch_row['bill_number'] ?? '';
     $invoice_number = $purch_row['invoice_number'] ?? '';
     $account_name = $purch_row['account_name'] ?? '';
@@ -597,9 +648,9 @@ if($function=='setPerpageValue'){
     $gst_amount = $purch_row['gst_amount'] ?? '';
     $taxable_amount = $purch_row['taxable_amount'] ?? '';
     $amount = $purch_row['amount'] ?? '';
-    
+
     $now = date('Y-m-d H:i:s');
-    
+
     $query = "INSERT INTO tbl_store_items (
         purchase_id, store_id, store_name, bill_number, invoice_number, account_name,
         barcode_number, item_name, item_type, category, brand, size, color, style,
@@ -611,15 +662,37 @@ if($function=='setPerpageValue'){
         ?, ?, ?, ?, ?, ?, ?, ?,
         ?, ?, 'active', ?, ?
     )";
-    
+
     $params = 'iisssssssssssissssssssssss';
     $fields = array(
-        $purchase_id, $store_id, $store_name, $bill_number, $invoice_number, $account_name,
-        $bc, $iname, $item_type, $category, $brand, $size, $color, $style,
-        $stock_qty, $mou_name, $rate, $purchase_price, $mrp, $selling_price, $gst, $gst_amount,
-        $taxable_amount, $amount, $now, $now
+        $purchase_id,
+        $store_id,
+        $store_name,
+        $bill_number,
+        $invoice_number,
+        $account_name,
+        $bc,
+        $iname,
+        $item_type,
+        $category,
+        $brand,
+        $size,
+        $color,
+        $style,
+        $stock_qty,
+        $mou_name,
+        $rate,
+        $purchase_price,
+        $mrp,
+        $selling_price,
+        $gst,
+        $gst_amount,
+        $taxable_amount,
+        $amount,
+        $now,
+        $now
     );
-    
+
     $res = $db->insert($query, $params, $fields);
     if ($res) {
         // Deduct stock quantity from tbl_purchase
@@ -660,29 +733,29 @@ if($function=='setPerpageValue'){
 } else if ($function == 'process_return_store_item') {
     $db = connect();
     $id = (int)($_REQUEST['id'] ?? $_POST['id'] ?? $_GET['id'] ?? 0);
-    
+
     if ($id <= 0) {
         echo json_encode(['status' => false, 'message' => 'Invalid store item ID']);
         exit;
     }
-    
+
     $stmt = $db->select("SELECT * FROM tbl_store_items WHERE id = ? LIMIT 1", 'i', array($id));
     if (!$stmt || $stmt->num_rows() == 0) {
         echo json_encode(['status' => false, 'message' => 'Store item record not found']);
         exit;
     }
-    
+
     $store_item = $stmt->fetch_assoc();
     if (($store_item['status'] ?? '') == 'moved in stock') {
         echo json_encode(['status' => false, 'message' => 'This item has already been returned/moved in stock']);
         exit;
     }
-    
+
     $now = date('Y-m-d H:i:s');
     $purchase_id = (int)($store_item['purchase_id'] ?? 0);
     $return_qty = (int)($store_item['qty'] ?? 0);
     $store_name = $store_item['store_name'] ?? '';
-    
+
     // Check if original purchase record exists in tbl_purchase
     $purch_row = null;
     if ($purchase_id > 0) {
@@ -691,16 +764,16 @@ if($function=='setPerpageValue'){
             $purch_row = $p_stmt->fetch_assoc();
         }
     }
-    
+
     if ($purch_row) {
         // Increase quantity in existing tbl_purchase record
         $orig_qty = (int)($purch_row['qty'] ?? 0);
         $new_qty = $orig_qty + $return_qty;
         $pid = (int)$purch_row['id'];
-        
+
         $pp = (float)($purch_row['purchase_price'] ?? 0);
         $gst_per = (float)($purch_row['gst'] ?? 0);
-        
+
         if ($pp > 0) {
             $new_net = $pp * $new_qty;
             if (($purch_row['gst_type'] ?? '') == 'Inclusive' && $gst_per > 0) {
@@ -716,7 +789,7 @@ if($function=='setPerpageValue'){
                 $new_taxable = round($new_net, 2);
                 $new_amount = round($new_net, 2);
             }
-            
+
             $db->query("UPDATE tbl_purchase SET qty = '$new_qty', gst_amount = '$new_gst_amount', taxable_amount = '$new_taxable', amount = '$new_amount', transfer_by = '$store_name', updated_date = '$now' WHERE id = $pid");
         } else {
             $db->query("UPDATE tbl_purchase SET qty = '$new_qty', transfer_by = '$store_name', updated_date = '$now' WHERE id = $pid");
@@ -734,23 +807,47 @@ if($function=='setPerpageValue'){
             ?, ?, ?, ?, ?, ?, ?, ?, ?,
             ?, ?, ?, 'active', ?, ?
         )";
-        
+
         $params = 'ssssssssssssssisssssssssssss';
         $pdate = date('Y-m-d');
         $sp_val = $store_item['selling_price'] ?? ($store_item['rate'] ?? '0');
         $amt_val = $store_item['amount'] ?? '0';
         $fields = array(
-            $pdate, $store_item['bill_number'] ?? '', $store_item['invoice_number'] ?? '', $store_name, $store_name, $store_item['account_name'] ?? '',
-            $store_item['item_name'] ?? '', $store_item['barcode_number'] ?? '', $store_item['item_type'] ?? '', $store_item['category'] ?? '', $store_item['brand'] ?? '', $store_item['size'] ?? '', $store_item['color'] ?? '', $store_item['style'] ?? '',
-            $return_qty, $store_item['mou_name'] ?? '', $store_item['rate'] ?? '', $store_item['purchase_price'] ?? '', $store_item['mrp'] ?? '', $sp_val, $store_item['selling_price'] ?? '', $store_item['gst'] ?? '', $store_item['gst_amount'] ?? '',
-            $store_item['taxable_amount'] ?? '', $amt_val, $amt_val, $now, $now
+            $pdate,
+            $store_item['bill_number'] ?? '',
+            $store_item['invoice_number'] ?? '',
+            $store_name,
+            $store_name,
+            $store_item['account_name'] ?? '',
+            $store_item['item_name'] ?? '',
+            $store_item['barcode_number'] ?? '',
+            $store_item['item_type'] ?? '',
+            $store_item['category'] ?? '',
+            $store_item['brand'] ?? '',
+            $store_item['size'] ?? '',
+            $store_item['color'] ?? '',
+            $store_item['style'] ?? '',
+            $return_qty,
+            $store_item['mou_name'] ?? '',
+            $store_item['rate'] ?? '',
+            $store_item['purchase_price'] ?? '',
+            $store_item['mrp'] ?? '',
+            $sp_val,
+            $store_item['selling_price'] ?? '',
+            $store_item['gst'] ?? '',
+            $store_item['gst_amount'] ?? '',
+            $store_item['taxable_amount'] ?? '',
+            $amt_val,
+            $amt_val,
+            $now,
+            $now
         );
         $db->insert($query, $params, $fields);
     }
-    
+
     // Mark status as 'moved in stock' in tbl_store_items
     $db->query("UPDATE tbl_store_items SET status = 'moved in stock', updated_date = '$now' WHERE id = $id");
-    
+
     echo json_encode(['status' => true, 'message' => 'Item returned successfully! Stock updated in purchase master and status marked as moved in stock.']);
     exit;
 }

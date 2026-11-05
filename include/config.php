@@ -22,11 +22,11 @@ if (session_status() === PHP_SESSION_NONE) {
 ############ General ############################
 date_default_timezone_set("Asia/Kolkata");
 
-define("_BASEURL", 'https://demo.tejaserp.com/');
-define("_BASEPATH", htmlspecialchars($_SERVER['DOCUMENT_ROOT']) . '/');
+// define("_BASEURL", 'https://demo.tejaserp.com/');
+// define("_BASEPATH", htmlspecialchars($_SERVER['DOCUMENT_ROOT']) . '/');
 
-// define("_BASEURL", 'http://localhost/demo-tej/');
-// define("_BASEPATH", dirname(__DIR__) . '/');
+define("_BASEURL", 'http://localhost/demo-tej/');
+define("_BASEPATH", dirname(__DIR__) . '/');
 
 
 if (!defined('_CLASS_PATH'))
@@ -66,6 +66,13 @@ if (!defined('_RECORDPERPAGE_')) {
     define("_RECORDPERPAGE_", "20");
 }
 
+############  Default Payment Mode setting ############################	
+// Configurable default payment mode for billing popup: 'CASH', 'UPI', 'CARD', 'CREDIT', 'DUAL'
+$DEFAULT_PAYMENT_MODE = 'CASH';
+if (!defined('_DEFAULT_PAYMENT_MODE_')) {
+    define('_DEFAULT_PAYMENT_MODE_', strtoupper(trim($DEFAULT_PAYMENT_MODE)));
+}
+
 ############  Javascript  path setting ############################	
 
 if (!defined('_JS_PATH'))
@@ -74,23 +81,23 @@ if (!defined('_JS_PATH'))
 
 
 ############  DataBase   setting ############################	
-if (!defined('_HOST_'))
-    define("_HOST_", "localhost");
-if (!defined('_USER_'))
-    define("_USER_", "u488042670_demoerp");
-if (!defined('_PASS_'))
-    define("_PASS_", "Hn3#bcXL|");
-if (!defined('_DB_'))
-    define("_DB_", "u488042670_demoerp");
-    
 // if (!defined('_HOST_'))
 //     define("_HOST_", "localhost");
 // if (!defined('_USER_'))
-//     define("_USER_", "admin");
+//     define("_USER_", "u488042670_demoerp");
 // if (!defined('_PASS_'))
-//     define("_PASS_", "admin");
+//     define("_PASS_", "Hn3#bcXL|");
 // if (!defined('_DB_'))
 //     define("_DB_", "u488042670_demoerp");
+
+if (!defined('_HOST_'))
+    define("_HOST_", "localhost");
+if (!defined('_USER_'))
+    define("_USER_", "admin");
+if (!defined('_PASS_'))
+    define("_PASS_", "admin");
+if (!defined('_DB_'))
+    define("_DB_", "u488042670_demoerp");
 
 require_once(_BASEPATH . "classes/pager_v2.cls.php");
 require_once(_BASEPATH . "classes/validation.php");

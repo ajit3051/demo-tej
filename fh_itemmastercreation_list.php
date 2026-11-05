@@ -72,8 +72,8 @@
                                  <form id="itemMasterSearchForm" class="search-form-wrap pull-right" onsubmit="return false;" style="width: 100%; max-width: 360px;">
                                     <input type="hidden" name="page" value="1">
                                     <div class="input-group search-box-group">
-                                       <input type="text" name="search" class="form-control search-input search-input-field" placeholder="Search Item Code, Name, Barcode, Group...">
-                                       <span class="input-group-addon search-addon-btn">
+                                       <input type="text" name="search" class="form-control search-input search-input-field" placeholder="Search Item Code, Name, Barcode, Brand, Color...">
+                                       <span class="input-group-addon search-addon-btn" id="itemMasterSearchBtn" style="cursor: pointer;" title="Click to search">
                                           <i class="fa fa-search search-icon-sm"></i>
                                        </span>
                                     </div>
@@ -125,6 +125,6 @@
 
       <?php include('include/js.php');?>
       <!-- Item Master AJAX Search & Pagination JS -->
-      <script src="assets/dist/js/page/itemmaster-list.js"></script>
+      <script src="assets/dist/js/page/itemmaster-list.js?v=<?= time(); ?>"></script>
    </body>
 </html>

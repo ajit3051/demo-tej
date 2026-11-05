@@ -37,4 +37,8 @@ $(document).ready(function() {
         e.preventDefault();
         loadAccountMasterData(1);
     });
+
+    $(document).on('click', '#accountMasterSearchBtn', function() {
+        loadAccountMasterData(1);
+    });
 });

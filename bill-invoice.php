@@ -1,35 +1,55 @@
 <?php include_once("include/config.php"); ?>
 <?php
 $validationHelper = new validation();
-
 $db = connect();
 
-$bill_no = $_GET['bill_no'] ?? '';
+$bill_no = $_GET['bill_no'] ?? $_GET['bill_number'] ?? '';
+$id = (int)($_GET['id'] ?? 0);
 $type = $_GET['type'] ?? 'sale';
+
+// If bill_no is empty but id is provided, fetch bill_number from database
+if (empty($bill_no) && $id > 0) {
+    if ($type == 'sale') {
+        $id_stmt = $db->select("SELECT bill_number FROM tbl_bill WHERE id=? LIMIT 1", 'i', $id);
+    } else {
+        $id_stmt = $db->select("SELECT bill_number FROM tbl_purchase WHERE id=? LIMIT 1", 'i', $id);
+    }
+    if ($id_stmt) {
+        $id_row = $id_stmt->fetch_assoc();
+        if ($id_row) {
+            $bill_no = $id_row['bill_number'];
+        }
+        $id_stmt->close();
+    }
+}
 
 $items = [];
 $account_name = 'Walk-in Customer';
 $mobile_number = 'N/A';
 $purchage_date = date('Y-m-d');
+$created_date = date('Y-m-d H:i:s');
 $pay_mode = 'CASH';
 $under_gst = 'Local';
 $gst_type = 'N/A';
+$store_name = '';
+$s_code = '';
 
 if (!empty($bill_no)) {
-  if ($type == 'sale') {
-    $stmt = $db->select("SELECT * FROM tbl_bill WHERE bill_number=? ORDER BY id ASC", 's', $bill_no);
-  } else {
-    $stmt = $db->select("SELECT * FROM tbl_purchase WHERE bill_number=? ORDER BY id ASC", 's', $bill_no);
-  }
-  
-  if ($stmt) {
-    while ($row = $stmt->fetch_assoc()) {
-        $items[] = $row;
+    if ($type == 'sale') {
+        $stmt = $db->select("SELECT * FROM tbl_bill WHERE bill_number=? ORDER BY id ASC", 's', $bill_no);
+    } else {
+        $stmt = $db->select("SELECT * FROM tbl_purchase WHERE bill_number=? ORDER BY id ASC", 's', $bill_no);
     }
-    $stmt->close();
-  }
+    
+    if ($stmt) {
+        while ($row = $stmt->fetch_assoc()) {
+            $items[] = $row;
+        }
+        $stmt->close();
+    }
 }
 
+$first = [];
 if (!empty($items)) {
     $first = $items[0];
     foreach ($first as $key => $value) {
@@ -37,107 +57,289 @@ if (!empty($items)) {
     }
 }
 
+// Calculate financial totals
 $total_taxable_amount = 0;
 $total_gst_amount = 0;
-$grand_total_amount = 0;
+$items_amount = 0;
 $total_items_qty = 0;
+$highest_gst_rate = 0;
 
 foreach ($items as $item) {
     $total_taxable_amount += (float)($item['taxable_amount'] ?? 0);
-    $total_gst_amount += (float)($item['gst_amount'] ?? 0);
-    $grand_total_amount += (float)($item['amount'] ?? 0);
-    $total_items_qty += (int)($item['qty'] ?? 1);
+    $total_gst_amount     += (float)($item['gst_amount'] ?? 0);
+    $items_amount         += (float)($item['amount'] ?? 0);
+    $total_items_qty      += (int)($item['qty'] ?? 1);
+    $cur_gst = (float)($item['gst'] ?? 0);
+    if ($cur_gst > $highest_gst_rate) {
+        $highest_gst_rate = $cur_gst;
+    }
+}
+
+$packing_amount        = (float)($first['packing_amount'] ?? 0);
+$delivery_amount       = (float)($first['delivery_amount'] ?? 0);
+$other_amount          = (float)($first['other_amount'] ?? 0);
+$labour_amount         = (float)($first['labour_amount'] ?? 0);
+$extra_charges         = $packing_amount + $delivery_amount + $other_amount + $labour_amount;
+$discount_total_amount = (float)($first['discount_total_amount'] ?? 0);
+
+$grand_total_amount = ($items_amount + $extra_charges) - $discount_total_amount;
+if ($grand_total_amount <= 0 && !empty($first['amount'])) {
+    $grand_total_amount = (float)$first['amount'];
 }
 
 $pay_mode_display = !empty($pay_mode) ? getPayModeByCode($pay_mode) : 'CASH';
 $under_gst = $under_gst ?? 'Local';
+
+// Normalize paper size
+$raw_size = strtolower($_GET['size'] ?? ($_GET['print_option'] ?? '80mm'));
+if ($raw_size === 'a4') {
+    $current_size = 'A4';
+} else if ($raw_size === 'a5') {
+    $current_size = 'A5';
+} else {
+    $current_size = '80mm';
+}
+
+$auto_print = (!empty($_GET['auto_print']) && $_GET['auto_print'] == '1') ? 1 : 0;
+
+// Resolve Store Information (from tbl_storeprofile_master if available)
+$store_name_display = 'RAMALAYA';
+$store_address_display = "Lal Bahadur Shastri Int'l Airport, Varanasi, Uttar Pradesh 221006";
+$store_gstin_display = '09AANCM4929Q1ZG';
+$store_phone_display = '+91 766 904 7613';
+$store_email_display = 'info@prabhushriram.com';
+$store_web_display = 'www.prabhushriram.com';
+
+$store_row = null;
+if (!empty($store_name)) {
+    $st_stmt = $db->select("SELECT * FROM tbl_storeprofile_master WHERE store_name=? LIMIT 1", 's', $store_name);
+    if ($st_stmt) { $store_row = $st_stmt->fetch_assoc(); $st_stmt->close(); }
+}
+if (!$store_row && !empty($s_code)) {
+    $st_stmt = $db->select("SELECT * FROM tbl_storeprofile_master WHERE store_code=? OR code=? LIMIT 1", 'ss', $s_code, $s_code);
+    if ($st_stmt) { $store_row = $st_stmt->fetch_assoc(); $st_stmt->close(); }
+}
+if ($store_row) {
+    if (!empty($store_row['store_name'])) $store_name_display = $store_row['store_name'];
+    $addr = trim(($store_row['address1'] ?? '') . (!empty($store_row['address2']) ? ', ' . $store_row['address2'] : ''));
+    if (!empty($addr)) $store_address_display = $addr;
+    if (!empty($store_row['gst_no'])) $store_gstin_display = $store_row['gst_no'];
+    $ph = $store_row['phone_no'] ?: ($store_row['mobile_no1'] ?? '');
+    if (!empty($ph)) $store_phone_display = $ph;
+    if (!empty($store_row['email_id'])) $store_email_display = $store_row['email_id'];
+    if (!empty($store_row['website_link'])) $store_web_display = $store_row['website_link'];
+}
+
+$bill_time_display = !empty($created_date) ? date('h:i A', strtotime($created_date)) : date('h:i A');
+$bill_date_display = !empty($purchage_date) ? dateformat($purchage_date) : date('d-m-Y');
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>View & Print Invoice - <?= htmlspecialchars($bill_no) ?></title>
+  <title>Invoice - <?= htmlspecialchars($bill_no) ?></title>
   <link href="assets/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
   <link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css"/>
+  
+  <!-- Dynamic @page CSS rule updated per selected paper size -->
+  <style id="dynamic-page-size-style">
+    <?php if ($current_size === 'A4'): ?>
+      @page { size: A4 portrait; margin: 10mm 12mm; }
+    <?php elseif ($current_size === 'A5'): ?>
+      @page { size: A5 portrait; margin: 8mm 10mm; }
+    <?php else: ?>
+      @page { size: 80mm auto; margin: 0; }
+    <?php endif; ?>
+  </style>
+
   <style>
-    body { background-color: #eef2f5; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-    .print-size-btn.active, .modal-size-btn.active { background-color: #37475a !important; color: #fff !important; border-color: #232f3e !important; }
+    body {
+      background-color: #eef2f5;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    .print-size-btn.active {
+      background-color: #37475a !important;
+      color: #fff !important;
+      border-color: #232f3e !important;
+    }
+
+    /* On-Screen layout toggle */
+    body.size-mode-80mm .layout-80mm { display: block !important; }
+    body.size-mode-80mm .layout-A4   { display: none !important; }
+    body.size-mode-80mm .layout-A5   { display: none !important; }
+
+    body.size-mode-A4 .layout-80mm { display: none !important; }
+    body.size-mode-A4 .layout-A4   { display: block !important; }
+    body.size-mode-A4 .layout-A5   { display: none !important; }
+
+    body.size-mode-A5 .layout-80mm { display: none !important; }
+    body.size-mode-A5 .layout-A4   { display: none !important; }
+    body.size-mode-A5 .layout-A5   { display: block !important; }
+
+    /* ==================== PRINT MEDIA STYLES ==================== */
     @media print {
-      .cs-hide_print, .modal-backdrop, .modal-header, .modal-footer, .control-bar { display: none !important; }
-      body { background-color: #fff !important; padding: 0 !important; margin: 0 !important; }
+      .cs-hide_print,
+      .control-bar,
+      .modal,
+      .modal-backdrop,
+      .btn,
+      button {
+        display: none !important;
+      }
+
+      body {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .preview-container,
+      .invoice-box,
+      .container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+        display: block !important;
+      }
+
+      /* 80mm Print Mode */
+      body.size-mode-80mm {
+        width: 80mm !important;
+      }
+      body.size-mode-80mm .layout-80mm {
+        display: block !important;
+        width: 76mm !important;
+        max-width: 76mm !important;
+        margin: 0 auto !important;
+        padding: 2mm 3mm !important;
+        box-sizing: border-box !important;
+        box-shadow: none !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        color: #000 !important;
+      }
+
+      /* A4 Print Mode */
+      body.size-mode-A4 {
+        width: 100% !important;
+      }
+      body.size-mode-A4 .layout-A4 {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+        box-shadow: none !important;
+      }
+
+      /* A5 Print Mode */
+      body.size-mode-A5 {
+        width: 100% !important;
+      }
+      body.size-mode-A5 .layout-A5 {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+        box-shadow: none !important;
+      }
+
+      .table-bordered th, .table-bordered td {
+        border: 1px solid #777 !important;
+      }
+
+      tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
     }
   </style>
 </head>
-<body>
+<body class="size-mode-<?= $current_size ?>">
 
-<!-- Top Control Toolbar -->
-<div class="cs-hide_print control-bar" style="background: linear-gradient(135deg, #37475a, #232f3e); padding: 12px 20px; color: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.3); position: sticky; top: 0; z-index: 1000;">
-    <div>
-        <span style="font-weight: 600; font-size: 14px; margin-right: 15px;"><i class="fa fa-print"></i> Paper Size Configuration:</span>
+<!-- Top Control Toolbar (Hidden in Print) -->
+<div class="cs-hide_print control-bar" style="background: linear-gradient(135deg, #37475a, #232f3e); padding: 10px 20px; color: #fff; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.3); position: sticky; top: 0; z-index: 1000;">
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <span style="font-weight: 600; font-size: 13px;"><i class="fa fa-print"></i> Paper Size:</span>
         <div class="btn-group" role="group">
-            <button type="button" class="btn btn-sm btn-default print-size-btn active" data-size="80mm" onclick="switchPrintSize('80mm')">
-                <i class="fa fa-print"></i> Thermal 80mm
+            <button type="button" class="btn btn-sm btn-default print-size-btn <?= $current_size === '80mm' ? 'active btn-primary' : '' ?>" data-size="80mm" onclick="switchPrintSize('80mm')">
+                <i class="fa fa-file-text-o"></i> Thermal 80mm
             </button>
-            <button type="button" class="btn btn-sm btn-default print-size-btn" data-size="A4" onclick="switchPrintSize('A4')">
-                <i class="fa fa-file-text-o"></i> A4 Standard
+            <button type="button" class="btn btn-sm btn-default print-size-btn <?= $current_size === 'A4' ? 'active btn-primary' : '' ?>" data-size="A4" onclick="switchPrintSize('A4')">
+                <i class="fa fa-file-text"></i> A4 Standard
             </button>
-            <button type="button" class="btn btn-sm btn-default print-size-btn" data-size="A5" onclick="switchPrintSize('A5')">
+            <button type="button" class="btn btn-sm btn-default print-size-btn <?= $current_size === 'A5' ? 'active btn-primary' : '' ?>" data-size="A5" onclick="switchPrintSize('A5')">
                 <i class="fa fa-file-o"></i> A5 Compact
             </button>
         </div>
     </div>
-    <div>
-        <button type="button" class="btn btn-sm btn-warning" onclick="$('#printModalPopup').modal('show')">
-            <i class="fa fa-window-restore"></i> Open Size Options Popup
+    <div style="display: flex; gap: 10px;">
+        <button type="button" class="btn btn-sm btn-success" onclick="window.print()" style="font-weight: 600; padding: 6px 18px;">
+            <i class="fa fa-print"></i> Print Invoice
         </button>
-        <button type="button" class="btn btn-sm btn-success" onclick="printInvoiceCurrent()">
-            <i class="fa fa-print"></i> Print Invoice Now
+        <button type="button" class="btn btn-sm btn-default" onclick="window.close()" style="font-weight: 600; padding: 6px 14px; color: #333;">
+            <i class="fa fa-times"></i> Close
         </button>
     </div>
 </div>
 
-<!-- On-Screen Preview Area -->
-<div class="container cs-hide_print" style="margin-top: 20px; margin-bottom: 40px;">
+<!-- Main Invoice Preview Area -->
+<div class="container preview-container" style="margin-top: 20px; margin-bottom: 40px;">
     <div style="display: flex; justify-content: center; background: #eaeded; padding: 25px 15px; border-radius: 8px; min-height: 500px; box-shadow: inset 0 0 8px rgba(0,0,0,0.1);">
         <div class="invoice-box" style="background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 4px;">
             
             <!-- ==================== 80mm THERMAL RECEIPT LAYOUT ==================== -->
-            <div class="layout-80mm size-layout" style="width: 290px; padding: 12px; font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; line-height: 1.3; display: block;">
+            <div class="layout-80mm size-layout" style="width: 290px; padding: 12px; font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #000; line-height: 1.3;">
                 <div style="text-align: center; margin-bottom: 8px;">
-                    <div style="font-size: 18px; font-weight: bold; color: #000; text-transform: uppercase;">RAMALAYA</div>
-                    <div style="font-size: 10px; margin-top: 2px;">Lal Bahadur Shastri Int'l Airport</div>
-                    <div style="font-size: 10px;">Varanasi, Uttar Pradesh 221006</div>
-                    <div style="font-size: 10px;">GSTIN: 09AANCM4929Q1ZG</div>
-                    <div style="font-size: 10px;">Ph: +91 766 904 7613</div>
+                    <div style="font-size: 17px; font-weight: bold; color: #000; text-transform: uppercase;"><?= htmlspecialchars($store_name_display) ?></div>
+                    <div style="font-size: 10px; margin-top: 2px;"><?= htmlspecialchars($store_address_display) ?></div>
+                    <div style="font-size: 10px;">GSTIN: <?= htmlspecialchars($store_gstin_display) ?></div>
+                    <div style="font-size: 10px;">Ph: <?= htmlspecialchars($store_phone_display) ?></div>
                 </div>
                 
                 <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
                 <div style="font-size: 10px;">
                     <div><strong>Bill No:</strong> <?= htmlspecialchars($bill_no) ?></div>
-                    <div><strong>Date:</strong> <?= dateformat($purchage_date) ?> <?= date('h:i A') ?></div>
+                    <div><strong>Date:</strong> <?= $bill_date_display ?> <?= $bill_time_display ?></div>
                     <div><strong>Customer:</strong> <?= htmlspecialchars($account_name) ?></div>
                     <div><strong>Mobile:</strong> <?= htmlspecialchars($mobile_number) ?></div>
                     <div><strong>Pay Mode:</strong> <?= htmlspecialchars($pay_mode_display) ?></div>
                 </div>
                 <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
                 
-                <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin: 4px 0;">
                     <thead>
                         <tr style="border-bottom: 1px dashed #000;">
                             <th style="text-align: left; padding-bottom: 4px;">Item</th>
-                            <th style="text-align: center; padding-bottom: 4px;">Qty</th>
-                            <th style="text-align: right; padding-bottom: 4px;">Amount</th>
+                            <th style="text-align: center; padding-bottom: 4px; width: 32px;">Qty</th>
+                            <th style="text-align: right; padding-bottom: 4px; width: 48px;">Rate</th>
+                            <th style="text-align: right; padding-bottom: 4px; width: 55px;">Amount</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($items as $itm): ?>
                         <tr>
-                            <td style="padding: 3px 0; text-align: left;">
+                            <td style="padding: 3px 0; text-align: left; word-break: break-word;">
                                 <?= htmlspecialchars($itm['item_name'] ?? '') ?>
-                                <?php if (!empty($itm['size'])): ?>(<?= htmlspecialchars($itm['size']) ?>)<?php endif; ?>
+                                <?php if (!empty($itm['size'])): ?><span style="font-size: 9px; color: #333;">(<?= htmlspecialchars($itm['size']) ?>)</span><?php endif; ?>
                             </td>
                             <td style="padding: 3px 0; text-align: center; vertical-align: top;"><?= $itm['qty'] ?? 1 ?></td>
+                            <td style="padding: 3px 0; text-align: right; vertical-align: top;"><?= number_format((float)($itm['rate'] ?? 0), 2) ?></td>
                             <td style="padding: 3px 0; text-align: right; vertical-align: top;"><?= number_format((float)($itm['amount'] ?? 0), 2) ?></td>
                         </tr>
                         <?php endforeach; ?>
@@ -148,26 +350,42 @@ $under_gst = $under_gst ?? 'Local';
                 
                 <div style="font-size: 10px;">
                     <div style="display: flex; justify-content: space-between;">
-                        <span>Total Qty:</span>
-                        <span><?= $total_items_qty ?></span>
+                        <span>Total Items / Qty:</span>
+                        <span><?= count($items) ?> / <?= $total_items_qty ?></span>
                     </div>
                     <div style="display: flex; justify-content: space-between;">
                         <span>Taxable Value:</span>
                         <span>₹ <?= number_format($total_taxable_amount, 2) ?></span>
                     </div>
                     <?php if ($under_gst == 'Inter'): ?>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>IGST 5%:</span>
-                        <span>₹ <?= number_format($total_gst_amount, 2) ?></span>
-                    </div>
+                        <?php if ($total_gst_amount > 0): ?>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>IGST<?= $highest_gst_rate > 0 ? ' (' . $highest_gst_rate . '%)' : '' ?>:</span>
+                            <span>₹ <?= number_format($total_gst_amount, 2) ?></span>
+                        </div>
+                        <?php endif; ?>
                     <?php else: ?>
+                        <?php if ($total_gst_amount > 0): ?>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>CGST<?= $highest_gst_rate > 0 ? ' (' . ($highest_gst_rate / 2) . '%)' : '' ?>:</span>
+                            <span>₹ <?= number_format($total_gst_amount / 2, 2) ?></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>SGST<?= $highest_gst_rate > 0 ? ' (' . ($highest_gst_rate / 2) . '%)' : '' ?>:</span>
+                            <span>₹ <?= number_format($total_gst_amount / 2, 2) ?></span>
+                        </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                    <?php if ($extra_charges > 0): ?>
                     <div style="display: flex; justify-content: space-between;">
-                        <span>CGST 2.5%:</span>
-                        <span>₹ <?= number_format($total_gst_amount / 2, 2) ?></span>
+                        <span>Extra Charges:</span>
+                        <span>₹ <?= number_format($extra_charges, 2) ?></span>
                     </div>
+                    <?php endif; ?>
+                    <?php if ($discount_total_amount > 0): ?>
                     <div style="display: flex; justify-content: space-between;">
-                        <span>SGST 2.5%:</span>
-                        <span>₹ <?= number_format($total_gst_amount / 2, 2) ?></span>
+                        <span>Discount:</span>
+                        <span>-₹ <?= number_format($discount_total_amount, 2) ?></span>
                     </div>
                     <?php endif; ?>
                     <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; margin-top: 4px; border-top: 1px solid #000; padding-top: 4px;">
@@ -179,26 +397,26 @@ $under_gst = $under_gst ?? 'Local';
                 <div style="border-top: 1px dashed #000; margin: 8px 0 6px 0;"></div>
                 <div style="text-align: center; font-size: 10px;">
                     <div>Thank you for shopping with us!</div>
-                    <div>Visit Again! www.prabhushriram.com</div>
+                    <div>Visit Again! <?= htmlspecialchars($store_web_display) ?></div>
                 </div>
             </div>
 
             <!-- ==================== A4 STANDARD INVOICE LAYOUT ==================== -->
-            <div class="layout-A4 size-layout" style="display: none; width: 780px; padding: 30px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4;">
+            <div class="layout-A4 size-layout" style="width: 780px; padding: 30px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; color: #333; line-height: 1.4;">
                 <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #37475a; padding-bottom: 15px; margin-bottom: 20px;">
                     <div>
-                        <h2 style="margin: 0; color: #FF7F50; font-weight: bold; font-size: 26px;">RAMALAYA</h2>
+                        <h2 style="margin: 0; color: #37475a; font-weight: bold; font-size: 24px; text-transform: uppercase;"><?= htmlspecialchars($store_name_display) ?></h2>
                         <div style="color: #555; font-size: 11px; margin-top: 4px;">
-                            Lal Bahadur Shastri International Airport, Varanasi UP 221006<br>
-                            <strong>GSTIN:</strong> 09AANCM4929Q1ZG | <strong>Phone:</strong> +91 766 904 7613<br>
-                            <strong>Email:</strong> info@prabhushriram.com | <strong>Web:</strong> www.prabhushriram.com
+                            <?= htmlspecialchars($store_address_display) ?><br>
+                            <strong>GSTIN:</strong> <?= htmlspecialchars($store_gstin_display) ?> | <strong>Phone:</strong> <?= htmlspecialchars($store_phone_display) ?><br>
+                            <strong>Email:</strong> <?= htmlspecialchars($store_email_display) ?> | <strong>Web:</strong> <?= htmlspecialchars($store_web_display) ?>
                         </div>
                     </div>
                     <div style="text-align: right;">
                         <h3 style="margin: 0; color: #37475a; font-size: 20px; font-weight: bold; text-transform: uppercase;">TAX INVOICE</h3>
                         <div style="margin-top: 8px; font-size: 12px;">
                             <div><strong>Invoice No:</strong> <span style="color: #000; font-weight:600;"><?= htmlspecialchars($bill_no) ?></span></div>
-                            <div><strong>Date:</strong> <?= dateformat($purchage_date) ?></div>
+                            <div><strong>Date:</strong> <?= $bill_date_display ?></div>
                             <div><strong>Payment Mode:</strong> <?= htmlspecialchars($pay_mode_display) ?></div>
                         </div>
                     </div>
@@ -237,8 +455,8 @@ $under_gst = $under_gst ?? 'Local';
                         <tr>
                             <td style="padding: 8px; text-align: center;"><?= $idx++ ?></td>
                             <td style="padding: 8px; font-weight: 600;"><?= htmlspecialchars($itm['item_name'] ?? '') ?></td>
-                            <td style="padding: 8px; text-align: center; color: #555;"><?= htmlspecialchars($itm['barcode_number'] ?? '33074100') ?></td>
-                            <td style="padding: 8px; text-align: center; color: #555;"><?= htmlspecialchars($itm['size'] ?? '-') ?> / <?= htmlspecialchars($itm['color'] ?? '-') ?></td>
+                            <td style="padding: 8px; text-align: center; color: #555;"><?= htmlspecialchars($itm['barcode_number'] ?? ($itm['article_no'] ?? '-')) ?></td>
+                            <td style="padding: 8px; text-align: center; color: #555;"><?= htmlspecialchars($itm['size'] ?? '-') ?><?= !empty($itm['color']) ? ' / ' . htmlspecialchars($itm['color']) : '' ?></td>
                             <td style="padding: 8px; text-align: center;"><?= $itm['qty'] ?? 1 ?></td>
                             <td style="padding: 8px; text-align: right;"><?= number_format((float)($itm['rate'] ?? 0), 2) ?></td>
                             <td style="padding: 8px; text-align: right;"><?= number_format((float)($itm['taxable_amount'] ?? 0), 2) ?></td>
@@ -252,9 +470,9 @@ $under_gst = $under_gst ?? 'Local';
                 <div style="display: flex; justify-content: space-between; margin-top: 15px;">
                     <div style="width: 55%;">
                         <div style="border: 1px solid #e9ecef; padding: 10px; border-radius: 4px; background: #fafafa; font-size: 11px;">
-                            <strong>Terms & Conditions:</strong><br>
+                            <strong>Terms &amp; Conditions:</strong><br>
                             1. Goods once sold will not be taken back without original bill.<br>
-                            2. Subject to Varanasi Jurisdiction.<br>
+                            2. Subject to jurisdiction of store city.<br>
                             3. This is a computer generated invoice.
                         </div>
                     </div>
@@ -265,18 +483,34 @@ $under_gst = $under_gst ?? 'Local';
                                 <td style="padding: 4px 0; text-align: right;">₹ <?= number_format($total_taxable_amount, 2) ?></td>
                             </tr>
                             <?php if ($under_gst == 'Inter'): ?>
-                            <tr>
-                                <td style="padding: 4px 0; text-align: left;">IGST Total:</td>
-                                <td style="padding: 4px 0; text-align: right;">₹ <?= number_format($total_gst_amount, 2) ?></td>
-                            </tr>
+                                <?php if ($total_gst_amount > 0): ?>
+                                <tr>
+                                    <td style="padding: 4px 0; text-align: left;">IGST Total:</td>
+                                    <td style="padding: 4px 0; text-align: right;">₹ <?= number_format($total_gst_amount, 2) ?></td>
+                                </tr>
+                                <?php endif; ?>
                             <?php else: ?>
+                                <?php if ($total_gst_amount > 0): ?>
+                                <tr>
+                                    <td style="padding: 4px 0; text-align: left;">CGST Total:</td>
+                                    <td style="padding: 4px 0; text-align: right;">₹ <?= number_format($total_gst_amount / 2, 2) ?></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 4px 0; text-align: left;">SGST Total:</td>
+                                    <td style="padding: 4px 0; text-align: right;">₹ <?= number_format($total_gst_amount / 2, 2) ?></td>
+                                </tr>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                            <?php if ($extra_charges > 0): ?>
                             <tr>
-                                <td style="padding: 4px 0; text-align: left;">CGST Total:</td>
-                                <td style="padding: 4px 0; text-align: right;">₹ <?= number_format($total_gst_amount / 2, 2) ?></td>
+                                <td style="padding: 4px 0; text-align: left;">Extra Charges:</td>
+                                <td style="padding: 4px 0; text-align: right;">₹ <?= number_format($extra_charges, 2) ?></td>
                             </tr>
+                            <?php endif; ?>
+                            <?php if ($discount_total_amount > 0): ?>
                             <tr>
-                                <td style="padding: 4px 0; text-align: left;">SGST Total:</td>
-                                <td style="padding: 4px 0; text-align: right;">₹ <?= number_format($total_gst_amount / 2, 2) ?></td>
+                                <td style="padding: 4px 0; text-align: left;">Discount / Adjustment:</td>
+                                <td style="padding: 4px 0; text-align: right;">-₹ <?= number_format($discount_total_amount, 2) ?></td>
                             </tr>
                             <?php endif; ?>
                             <tr style="border-top: 2px solid #37475a; font-size: 14px; font-weight: bold;">
@@ -298,20 +532,20 @@ $under_gst = $under_gst ?? 'Local';
             </div>
 
             <!-- ==================== A5 COMPACT INVOICE LAYOUT ==================== -->
-            <div class="layout-A5 size-layout" style="display: none; width: 550px; padding: 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #333; line-height: 1.3;">
+            <div class="layout-A5 size-layout" style="width: 550px; padding: 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #333; line-height: 1.3;">
                 <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #37475a; padding-bottom: 8px; margin-bottom: 12px;">
                     <div>
-                        <h3 style="margin: 0; color: #FF7F50; font-weight: bold; font-size: 20px;">RAMALAYA</h3>
+                        <h3 style="margin: 0; color: #37475a; font-weight: bold; font-size: 18px; text-transform: uppercase;"><?= htmlspecialchars($store_name_display) ?></h3>
                         <div style="color: #555; font-size: 10px;">
-                            Lal Bahadur Shastri Airport, Varanasi UP<br>
-                            <strong>GSTIN:</strong> 09AANCM4929Q1ZG | Ph: +91 766 904 7613
+                            <?= htmlspecialchars($store_address_display) ?><br>
+                            <strong>GSTIN:</strong> <?= htmlspecialchars($store_gstin_display) ?> | Ph: <?= htmlspecialchars($store_phone_display) ?>
                         </div>
                     </div>
                     <div style="text-align: right;">
-                        <h4 style="margin: 0; color: #37475a; font-size: 16px; font-weight: bold;">TAX INVOICE (A5)</h4>
+                        <h4 style="margin: 0; color: #37475a; font-size: 15px; font-weight: bold;">TAX INVOICE (A5)</h4>
                         <div style="font-size: 11px; margin-top: 4px;">
                             <strong>Bill No:</strong> <?= htmlspecialchars($bill_no) ?><br>
-                            <strong>Date:</strong> <?= dateformat($purchage_date) ?>
+                            <strong>Date:</strong> <?= $bill_date_display ?>
                         </div>
                     </div>
                 </div>
@@ -352,18 +586,32 @@ $under_gst = $under_gst ?? 'Local';
 
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; font-size: 11px;">
                     <div style="font-size: 10px; color: #666; width: 50%;">
-                        Thank you for shopping with RAMALAYA!<br>
-                        Subject to Varanasi Jurisdiction.
+                        Thank you for shopping with us!<br>
+                        <?= htmlspecialchars($store_web_display) ?>
                     </div>
                     <div style="width: 45%;">
                         <div style="display: flex; justify-content: space-between;">
                             <span>Taxable:</span>
                             <span>₹ <?= number_format($total_taxable_amount, 2) ?></span>
                         </div>
+                        <?php if ($total_gst_amount > 0): ?>
                         <div style="display: flex; justify-content: space-between;">
                             <span>GST Total:</span>
                             <span>₹ <?= number_format($total_gst_amount, 2) ?></span>
                         </div>
+                        <?php endif; ?>
+                        <?php if ($extra_charges > 0): ?>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Extra Charges:</span>
+                            <span>₹ <?= number_format($extra_charges, 2) ?></span>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($discount_total_amount > 0): ?>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Discount:</span>
+                            <span>-₹ <?= number_format($discount_total_amount, 2) ?></span>
+                        </div>
+                        <?php endif; ?>
                         <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-top: 4px; border-top: 1px solid #37475a; padding-top: 4px;">
                             <span>Total:</span>
                             <span>₹ <?= number_format($grand_total_amount, 2) ?></span>
@@ -376,66 +624,25 @@ $under_gst = $under_gst ?? 'Local';
     </div>
 </div>
 
-<!-- PRINT OPTIONS POPUP MODAL -->
-<div class="modal fade" id="printModalPopup" tabindex="-1" role="dialog" aria-labelledby="printModalPopupLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" style="max-width: 950px; width: 95%;">
-        <div class="modal-content" style="border-radius: 8px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.4);">
-            <div class="modal-header" style="background: linear-gradient(135deg, #37475a, #232f3e); color: #fff; padding: 14px 20px;">
-                <button type="button" class="close" data-dismiss="modal" onclick="closePrintModal()" aria-hidden="true" style="color: #fff; opacity: 0.8;">×</button>
-                <h4 class="modal-title" id="printModalPopupLabel" style="margin:0; font-weight:600;">
-                    <i class="fa fa-print"></i> Select Print Size Configuration & Preview (Bill No: <?= htmlspecialchars($bill_no) ?>)
-                </h4>
-            </div>
-            <div class="modal-body" style="background-color: #f4f6f9; padding: 20px;">
-                <div class="row" style="margin-bottom: 15px;">
-                    <div class="col-sm-8 col-xs-12">
-                        <span style="font-weight: 600; margin-right: 10px; font-size: 13px; color: #333;"><i class="fa fa-sliders"></i> Paper Size Options:</span>
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-sm btn-default modal-size-btn active" data-size="80mm" onclick="switchPrintSize('80mm')">
-                                <i class="fa fa-print"></i> 80mm Thermal POS
-                            </button>
-                            <button type="button" class="btn btn-sm btn-default modal-size-btn" data-size="A4" onclick="switchPrintSize('A4')">
-                                <i class="fa fa-file-text-o"></i> A4 Standard
-                            </button>
-                            <button type="button" class="btn btn-sm btn-default modal-size-btn" data-size="A5" onclick="switchPrintSize('A5')">
-                                <i class="fa fa-file-o"></i> A5 Compact
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-sm-4 col-xs-12 text-right">
-                        <button type="button" class="btn btn-sm btn-success" onclick="printInvoiceCurrent()">
-                            <i class="fa fa-print"></i> Print Invoice Now
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Modal Live Preview Container -->
-                <div style="display: flex; justify-content: center; background: #eaeded; padding: 20px 10px; border-radius: 6px; min-height: 460px; overflow-x: auto;">
-                    <div id="modal-invoice-preview-container" style="background: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.15); border-radius: 4px;">
-                        <!-- LAYOUT CLONED HERE -->
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer" style="background-color: #eef2f5;">
-                <span style="float: left; font-size: 12px; color: #666; line-height: 30px;">
-                    Selected Size: <strong id="modal-selected-size-label" style="color: #37475a;">80mm Thermal POS</strong>
-                </span>
-                <button type="button" class="btn btn-success" onclick="printInvoiceCurrent()"><i class="fa fa-print"></i> Print</button>
-                <button type="button" class="btn btn-danger" data-dismiss="modal" onclick="closePrintModal()">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script src="assets/plugins/jQuery/jquery-1.12.4.min.js"></script>
 <script src="assets/bootstrap/js/bootstrap.min.js"></script>
 <script>
-var currentPrintSize = '80mm';
+var currentPrintSize = '<?= $current_size ?>';
+
+var pageCssMap = {
+    '80mm': '@page { size: 80mm auto; margin: 0; }',
+    'A4':   '@page { size: A4 portrait; margin: 10mm 12mm; }',
+    'A5':   '@page { size: A5 portrait; margin: 8mm 10mm; }'
+};
 
 function switchPrintSize(size) {
     currentPrintSize = size;
     
-    var buttons = document.querySelectorAll('.print-size-btn, .modal-size-btn');
+    // Update body class
+    document.body.className = 'size-mode-' + size;
+    
+    // Update buttons
+    var buttons = document.querySelectorAll('.print-size-btn');
     buttons.forEach(function(btn) {
         if (btn.getAttribute('data-size') === size) {
             btn.classList.add('active', 'btn-primary');
@@ -446,91 +653,31 @@ function switchPrintSize(size) {
         }
     });
 
-    var layouts = document.querySelectorAll('.size-layout');
-    layouts.forEach(function(el) {
-        el.style.display = 'none';
-    });
-    var activeLayouts = document.querySelectorAll('.layout-' + size);
-    activeLayouts.forEach(function(el) {
-        el.style.display = 'block';
-    });
+    // Update dynamic @page CSS
+    var dynStyle = document.getElementById('dynamic-page-size-style');
+    if (dynStyle && pageCssMap[size]) {
+        dynStyle.innerHTML = pageCssMap[size];
+    }
 
-    var labelText = '80mm Thermal POS';
-    if (size === 'A4') labelText = 'A4 Standard (Full Page)';
-    if (size === 'A5') labelText = 'A5 Compact (Half Page)';
-
-    var modalLabel = document.getElementById('modal-selected-size-label');
-    if (modalLabel) modalLabel.textContent = labelText;
-    
-    var currentLabel = document.getElementById('current-selected-size-label');
-    if (currentLabel) currentLabel.textContent = labelText;
-}
-
-function openPrintModal() {
-    if (typeof $ !== 'undefined' && $.fn && $.fn.modal) {
-        $('#printModalPopup').modal('show');
-    } else {
-        var modalEl = document.getElementById('printModalPopup');
-        if (modalEl) {
-            modalEl.classList.add('in');
-            modalEl.style.display = 'block';
-        }
+    // Update URL parameter without reload
+    if (window.history && window.history.replaceState) {
+        var url = new URL(window.location.href);
+        url.searchParams.set('size', size);
+        window.history.replaceState({}, document.title, url.toString());
     }
 }
 
-function closePrintModal() {
-    if (typeof $ !== 'undefined' && $.fn && $.fn.modal) {
-        $('#printModalPopup').modal('hide');
-    } else {
-        var modalEl = document.getElementById('printModalPopup');
-        if (modalEl) {
-            modalEl.classList.remove('in');
-            modalEl.style.display = 'none';
-        }
+// Auto-print support when opened in a new window/tab with &auto_print=1
+<?php if ($auto_print): ?>
+window.addEventListener('load', function() {
+    // Only auto-print if opened as the top window (not inside an iframe)
+    if (window.self === window.top) {
+        setTimeout(function() {
+            window.print();
+        }, 350);
     }
-}
-
-function printInvoiceCurrent() {
-    var size = currentPrintSize;
-    var printElement = document.querySelector('.layout-' + size);
-    if (!printElement) return;
-
-    var printWindow = window.open('', '_blank', 'width=900,height=750');
-    var pageCss = '';
-
-    if (size === '80mm') {
-        pageCss = '@page { size: 80mm auto; margin: 0; } body { margin: 0; padding: 5px; font-family: "Courier New", Courier, monospace; width: 78mm; } table { width: 100%; border-collapse: collapse; }';
-    } else if (size === 'A5') {
-        pageCss = '@page { size: A5 portrait; margin: 8mm; } body { margin: 0; padding: 10px; font-family: Arial, sans-serif; width: 100%; } table { width: 100%; border-collapse: collapse; }';
-    } else {
-        pageCss = '@page { size: A4 portrait; margin: 10mm; } body { margin: 0; padding: 15px; font-family: Arial, sans-serif; width: 100%; } table { width: 100%; border-collapse: collapse; }';
-    }
-
-    printWindow.document.write('<!DOCTYPE html><html><head><title>Print Invoice - ' + size + '</title>');
-    printWindow.document.write('<link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">');
-    printWindow.document.write('<style>' + pageCss + ' .size-layout { display: block !important; width: 100% !important; box-shadow: none !important; padding: 0 !important; } </style>');
-    printWindow.document.write('</head><body>');
-    printWindow.document.write(printElement.outerHTML);
-    printWindow.document.write('</body></html>');
-    
-    printWindow.document.close();
-    printWindow.focus();
-    
-    setTimeout(function() {
-        printWindow.print();
-        printWindow.close();
-    }, 400);
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    var mainBox = document.querySelector('.invoice-box');
-    var modalContainer = document.getElementById('modal-invoice-preview-container');
-    if (mainBox && modalContainer) {
-        modalContainer.innerHTML = mainBox.outerHTML;
-    }
-    switchPrintSize('80mm');
-    openPrintModal();
 });
+<?php endif; ?>
 </script>
 </body>
 </html>

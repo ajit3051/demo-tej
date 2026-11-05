@@ -37,4 +37,8 @@ $(document).ready(function() {
         e.preventDefault();
         loadExpensesMasterData(1);
     });
+
+    $(document).on('click', '#expensesMasterSearchBtn', function() {
+        loadExpensesMasterData(1);
+    });
 });

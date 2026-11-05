@@ -52,52 +52,48 @@
    
    function getPaymentSum($recent = false) {
        $db = connect();
-        $dateCondition = "1 = 1";
-        if ($recent) {
-            $currentDate = date('Y-m-d');
-            // Replace 'created_at' with your actual date column name
-            $dateCondition = "DATE(created_date) = '{$currentDate}'";
-        }
-    
-        $sql = "SELECT 
-            'CASH' AS payment_mode,
-            COALESCE(SUM(CASE WHEN payment_mode = 'CASH' THEN qty ELSE 0 END), 0) AS total_qty,
-            COALESCE(SUM(CASE WHEN payment_mode = 'CASH' THEN pay_cash ELSE 0 END), 0) AS total_amount
-        FROM tbl_purchase 
-        WHERE {$dateCondition}
+       $dateCondition = "1 = 1";
+       if ($recent) {
+           $currentDate = date('Y-m-d');
+           $dateCondition = "DATE(created_date) = '{$currentDate}'";
+       }
 
-        UNION ALL
+       $sql = "SELECT 
+           pm.mode AS payment_mode,
+           COALESCE(SUM(CASE WHEN b.pay_mode = pm.mode OR (b.pay_mode = 'DUAL' AND ((pm.mode = 'CASH' AND b.bill_cash > 0) OR (pm.mode = 'UPI' AND b.bill_upi > 0) OR (pm.mode = 'CARD' AND b.bill_card > 0) OR (pm.mode = 'CREDIT' AND b.bill_credit > 0))) THEN b.total_qty ELSE 0 END), 0) AS total_qty,
+           COALESCE(SUM(CASE 
+               WHEN pm.mode = 'CASH' THEN (CASE WHEN b.bill_cash > 0 THEN b.bill_cash WHEN b.pay_mode = 'CASH' THEN b.bill_amount ELSE 0 END)
+               WHEN pm.mode = 'UPI' THEN (CASE WHEN b.bill_upi > 0 THEN b.bill_upi WHEN b.pay_mode = 'UPI' THEN b.bill_amount ELSE 0 END)
+               WHEN pm.mode = 'CARD' THEN (CASE WHEN b.bill_card > 0 THEN b.bill_card WHEN b.pay_mode = 'CARD' THEN b.bill_amount ELSE 0 END)
+               WHEN pm.mode = 'CREDIT' THEN (CASE WHEN b.bill_credit > 0 THEN b.bill_credit WHEN b.pay_mode = 'CREDIT' THEN b.bill_amount ELSE 0 END)
+               ELSE 0 END), 0) AS total_amount
+       FROM (
+           SELECT 'CASH' AS mode
+           UNION ALL SELECT 'UPI'
+           UNION ALL SELECT 'CARD'
+           UNION ALL SELECT 'CREDIT'
+       ) pm
+       LEFT JOIN (
+           SELECT 
+               bill_number,
+               MAX(pay_mode) as pay_mode,
+               SUM(qty) as total_qty,
+               SUM(amount) as bill_amount,
+               MAX(CAST(NULLIF(pay_cash, '') AS DECIMAL(10,2))) as bill_cash,
+               MAX(CAST(NULLIF(pay_upi, '') AS DECIMAL(10,2))) as bill_upi,
+               MAX(CAST(NULLIF(pay_card, '') AS DECIMAL(10,2))) as bill_card,
+               MAX(CAST(NULLIF(pay_credit, '') AS DECIMAL(10,2))) as bill_credit
+           FROM tbl_bill
+           WHERE {$dateCondition}
+           GROUP BY bill_number
+       ) b ON (b.pay_mode = pm.mode OR (pm.mode = 'CASH' AND b.bill_cash > 0) OR (pm.mode = 'UPI' AND b.bill_upi > 0) OR (pm.mode = 'CARD' AND b.bill_card > 0) OR (pm.mode = 'CREDIT' AND b.bill_credit > 0))
+       GROUP BY pm.mode
+       ORDER BY FIELD(pm.mode, 'CASH', 'UPI', 'CARD', 'CREDIT')";
 
-        SELECT 
-            'UPI' AS payment_mode,
-            COALESCE(SUM(CASE WHEN payment_mode = 'UPI' THEN qty ELSE 0 END), 0) AS total_qty,
-            COALESCE(SUM(CASE WHEN payment_mode = 'UPI' THEN pay_upi ELSE 0 END), 0) AS total_amount
-        FROM tbl_purchase 
-        WHERE {$dateCondition}
+       $query = $db->select($sql);
 
-        UNION ALL
-
-        SELECT 
-            'CARD' AS payment_mode,
-            COALESCE(SUM(CASE WHEN payment_mode = 'CARD' THEN qty ELSE 0 END), 0) AS total_qty,
-            COALESCE(SUM(CASE WHEN payment_mode = 'CARD' THEN pay_card ELSE 0 END), 0) AS total_amount
-        FROM tbl_purchase 
-        WHERE {$dateCondition}
-
-        UNION ALL
-
-        SELECT 
-            'CREDIT' AS payment_mode,
-            COALESCE(SUM(CASE WHEN payment_mode = 'CREDIT' THEN qty ELSE 0 END), 0) AS total_qty,
-            COALESCE(SUM(CASE WHEN payment_mode = 'CREDIT' THEN pay_credit ELSE 0 END), 0) AS total_amount
-        FROM tbl_purchase
-        WHERE {$dateCondition}";
-               
-    
-        $query = $db->select($sql);
-    
-        return $query;
-    }
+       return $query;
+   }
    
    ?>
 <?php include('include/header.php'); ?>
@@ -167,16 +163,17 @@
                
                 <div class="row">
                     <?php
+                     $i = 1;
                      $getPaymentSum = getPaymentSum(1);
                     while ($row = $getPaymentSum->fetch_assoc()) {
                     
                     ?>
                      <div class="col-xs-12 col-sm-6 col-md-6 col-lg-3">
-                        <div id="billwise-sale-cardbox1" >
+                        <div id="billwise-sale-cardbox<?= $i++; ?>" >
                            <div class="statistic-box">
                               <i style="font-size:16px;" class="fa fa-user-plus fa-3x"></i>
                               <div class="counter-number pull-right">
-                                 <span style="font-size:13px; color:#808080;" class="count-number" data-toggle="tooltip" title="Total Upcoming Booking"><?= $row['total_qty']; ?></span>
+                                 <span style="font-size:13px; color:#808080;" class="count-number" data-toggle="tooltip" title="Total Quantity"><?= $row['total_qty']; ?></span>
                                  <span class="slight">
                                  <i class="fa fa-play fa-rotate-270"></i>
                                  </span>
@@ -186,7 +183,7 @@
                                  <span style="font-size:20px; color:#808080;"><b><?= $row['payment_mode']; ?> !</b></span>
                               </div>
                               <div class="pull-left">
-                                 <span data-toggle="tooltip" title="Current Date Total Amount"><span style="font-size:20px; color:#808080;"><b><?= $row['total_amount']; ?></b></span></span>
+                                 <span data-toggle="tooltip" title="Current Date Total Amount"><span style="font-size:20px; color:#808080;"><b><?= number_format((float)$row['total_amount'], 2); ?></b></span></span>
                               </div>
                            </div>
                         </div>
@@ -338,18 +335,19 @@
                   background-color: #f1f1f1;
                   }
                </style>
-               <div class="row">
+                <div class="row">
                      <?php
+                     $i = 1;
                      $getPaymentSum = getPaymentSum();
                     while ($row = $getPaymentSum->fetch_assoc()) {
                     
                     ?>
                      <div class="col-xs-12 col-sm-6 col-md-6 col-lg-3">
-                        <div id="billwise-sale-cardbox1" >
+                        <div id="billwise-sale-cardbox<?= $i++; ?>" >
                            <div class="statistic-box">
                               <i style="font-size:16px;" class="fa fa-user-plus fa-3x"></i>
                               <div class="counter-number pull-right">
-                                 <span style="font-size:13px; color:#808080;" class="count-number" data-toggle="tooltip" title="Total Upcoming Booking"><?= $row['total_qty']; ?></span>
+                                 <span style="font-size:13px; color:#808080;" class="count-number" data-toggle="tooltip" title="Total Quantity"><?= $row['total_qty']; ?></span>
                                  <span class="slight">
                                  <i class="fa fa-play fa-rotate-270"></i>
                                  </span>
@@ -359,7 +357,7 @@
                                  <span style="font-size:20px; color:#808080;"><b><?= $row['payment_mode']; ?> !</b></span>
                               </div>
                               <div class="pull-left">
-                                 <span data-toggle="tooltip" title="Current Date Total Amount"><span style="font-size:20px; color:#808080;"><b><?= $row['total_amount']; ?></b></span></span>
+                                 <span data-toggle="tooltip" title="Total Amount"><span style="font-size:20px; color:#808080;"><b><?= number_format((float)$row['total_amount'], 2); ?></b></span></span>
                               </div>
                            </div>
                         </div>

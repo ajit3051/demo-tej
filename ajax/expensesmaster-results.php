@@ -1,45 +1,30 @@
 <?php
-include_once('../include/config.php');
+include_once(__DIR__ . '/../include/config.php');
 
 $search = isset($_POST['search']) ? trim($_POST['search']) : '';
 $page = isset($_POST['page']) && (int)$_POST['page'] > 0 ? (int)$_POST['page'] : 1;
 $perPage = isset($_SESSION["_RECORDPERPAGE_"]) && $_SESSION["_RECORDPERPAGE_"] ? (int)$_SESSION["_RECORDPERPAGE_"] : 20;
 $offset = ($page - 1) * $perPage;
 
-$whereClauses = array();
-$params = array();
-
-if ($search !== '') {
-    $whereClauses[] = "(expcode LIKE ? OR party_code LIKE ? OR account_name LIKE ? OR regular_name LIKE ? OR mobile_no LIKE ? OR exphead_name LIKE ? OR paymode_name LIKE ?)";
-    $searchTerm = '%' . $search . '%';
-    $params[] = $searchTerm;
-    $params[] = $searchTerm;
-    $params[] = $searchTerm;
-    $params[] = $searchTerm;
-    $params[] = $searchTerm;
-    $params[] = $searchTerm;
-    $params[] = $searchTerm;
-}
-
 $whereSql = '';
-if (count($whereClauses) > 0) {
-    $whereSql = ' WHERE ' . implode(' AND ', $whereClauses);
+if ($search !== '') {
+    $s = mysqli_real_escape_string($conn, $search);
+    $whereSql = " WHERE (expcode LIKE '%$s%' OR party_code LIKE '%$s%' OR account_name LIKE '%$s%' OR regular_name LIKE '%$s%' OR mobile_no LIKE '%$s%' OR exphead_name LIKE '%$s%' OR paymode_name LIKE '%$s%' OR remarks LIKE '%$s%' OR amount LIKE '%$s%')";
 }
 
 // Count total
-$countQuery = "SELECT COUNT(*) as total FROM tbl_expensescreation_master" . $whereSql;
-$countRes = $db->select($countQuery, $params, 'COUNT');
-$totalRecords = isset($countRes[0]['total']) ? (int)$countRes[0]['total'] : 0;
+$countQuery = mysqli_query($conn, "SELECT COUNT(*) as total FROM tbl_expensescreation_master" . $whereSql);
+$countRow = mysqli_fetch_assoc($countQuery);
+$totalRecords = isset($countRow['total']) ? (int)$countRow['total'] : 0;
 $totalPages = ceil($totalRecords / $perPage);
 
 // Fetch page results
-$dataQuery = "SELECT * FROM tbl_expensescreation_master" . $whereSql . " ORDER BY id DESC LIMIT $offset, $perPage";
-$rows = $db->select($dataQuery, $params, 'FETCH');
+$dataQuery = mysqli_query($conn, "SELECT * FROM tbl_expensescreation_master" . $whereSql . " ORDER BY id DESC LIMIT $offset, $perPage");
 
 ob_start();
-if (!empty($rows)) {
+if ($dataQuery && mysqli_num_rows($dataQuery) > 0) {
     $i = $offset + 1;
-    foreach ($rows as $user) {
+    while ($user = mysqli_fetch_assoc($dataQuery)) {
         ?>
         <tr>
             <td class="td-center-middle"><?php echo $i++; ?></td>

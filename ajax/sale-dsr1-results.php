@@ -20,39 +20,59 @@ $exportType = $_REQUEST['export'] ?? '';
 $params = '';
 $fields = array();
 
-$query = "SELECT 
-    ANY_VALUE(purchage_date) as purchage_date, 
-    SUM(qty) AS total_qty,
-    SUM(CAST(pay_cash AS DECIMAL(10,2))) AS total_cash,
-    SUM(CAST(pay_upi AS DECIMAL(10,2))) AS total_upi,
-    SUM(CAST(pay_card AS DECIMAL(10,2))) AS total_card,
-    SUM(CAST(pay_credit AS DECIMAL(10,2))) AS total_credit,
-    SUM(CAST(gst_amount AS DECIMAL(10,2))) as gst_amount, 
-    SUM(CAST(amount AS DECIMAL(10,2))) as amount,
-    SUM(CAST(purchase_price AS DECIMAL(10,2))) as purchase_price
-FROM tbl_bill 
-WHERE id > 0 ";
-
+$whereClause = "WHERE id > 0";
 if ($formId == 'latestsearchForm') {
-   $query .= " AND DATE(created_date) = ?";
+   $whereClause .= " AND DATE(created_date) = ?";
    $params .= 's';
    $fields[] = $today;
 }
 if ($from_date) {
-   $query .= " AND purchage_date >= ?";
+   $whereClause .= " AND purchage_date >= ?";
    $params .= 's';
    $fields[] = dateInSQLFormat($from_date);
 }
 if ($to_date) {
-   $query .= " AND purchage_date <= ?";
+   $whereClause .= " AND purchage_date <= ?";
    $params .= 's';
    $fields[] = dateInSQLFormat($to_date);
 }
 
-$query .= " GROUP BY DATE(purchage_date)";
+$query = "SELECT 
+    MAX(b.purchage_date) as purchage_date, 
+    SUM(b.total_qty) AS total_qty,
+    COALESCE(SUM(b.bill_cash), 0) AS total_cash,
+    COALESCE(SUM(b.bill_upi), 0) AS total_upi,
+    COALESCE(SUM(b.bill_card), 0) AS total_card,
+    COALESCE(SUM(b.bill_credit), 0) AS total_credit,
+    COALESCE(SUM(b.total_gst), 0) as gst_amount, 
+    COALESCE(SUM(b.total_amt), 0) as amount,
+    COALESCE(SUM(b.total_pp), 0) as purchase_price
+FROM (
+    SELECT 
+        bill_number,
+        MAX(id) as id,
+        MAX(purchage_date) as purchage_date,
+        MAX(created_date) as created_date,
+        MAX(barcode_number) as barcode_number,
+        MAX(account_name) as account_name,
+        MAX(gst_type) as gst_type,
+        MAX(item_name) as item_name,
+        SUM(qty) as total_qty,
+        SUM(CAST(gst_amount AS DECIMAL(10,2))) as total_gst,
+        SUM(CAST(amount AS DECIMAL(10,2))) as total_amt,
+        SUM(CAST(purchase_price AS DECIMAL(10,2))) as total_pp,
+        MAX(CAST(NULLIF(pay_cash, '') AS DECIMAL(10,2))) as bill_cash,
+        MAX(CAST(NULLIF(pay_upi, '') AS DECIMAL(10,2))) as bill_upi,
+        MAX(CAST(NULLIF(pay_card, '') AS DECIMAL(10,2))) as bill_card,
+        MAX(CAST(NULLIF(pay_credit, '') AS DECIMAL(10,2))) as bill_credit
+    FROM tbl_bill 
+    $whereClause
+    GROUP BY bill_number
+) b
+GROUP BY DATE(b.purchage_date)";
 
 if ($searchKey) {
-   $query .= " HAVING (ANY_VALUE(barcode_number) LIKE CONCAT('%', ?, '%') OR ANY_VALUE(bill_number) LIKE CONCAT('%', ?, '%') OR ANY_VALUE(account_name) LIKE CONCAT('%', ?, '%') OR ANY_VALUE(gst_type) LIKE CONCAT('%', ?, '%') OR ANY_VALUE(item_name) LIKE CONCAT('%', ?, '%') OR CAST(SUM(qty) AS CHAR) LIKE CONCAT('%', ?, '%') OR CAST(SUM(gst_amount) AS CHAR) LIKE CONCAT('%', ?, '%') OR CAST(SUM(amount) AS CHAR) LIKE CONCAT('%', ?, '%'))";
+   $query .= " HAVING (MAX(b.barcode_number) LIKE CONCAT('%', ?, '%') OR MAX(b.bill_number) LIKE CONCAT('%', ?, '%') OR MAX(b.account_name) LIKE CONCAT('%', ?, '%') OR MAX(b.gst_type) LIKE CONCAT('%', ?, '%') OR MAX(b.item_name) LIKE CONCAT('%', ?, '%') OR CAST(SUM(b.total_qty) AS CHAR) LIKE CONCAT('%', ?, '%') OR CAST(SUM(b.total_gst) AS CHAR) LIKE CONCAT('%', ?, '%') OR CAST(SUM(b.total_amt) AS CHAR) LIKE CONCAT('%', ?, '%'))";
 
    $params .= 'ssssssss';
    $fields[] = $searchKey;
@@ -99,7 +119,7 @@ $totalRecords = $stmt ? $stmt->num_rows() : 0;
 $recordsPerPage = $_SESSION["_RECORDPERPAGE_"] ? $_SESSION["_RECORDPERPAGE_"] : _RECORDPERPAGE_;
 $offSet = ($page - 1) * $recordsPerPage;
 
-$query .= " ORDER BY ANY_VALUE(id) $sortOrder LIMIT $offSet,$recordsPerPage";
+$query .= " ORDER BY MAX(b.id) $sortOrder LIMIT $offSet,$recordsPerPage";
 
 if (empty($fields)) {
    $stmt = $db->select($query);

@@ -24,8 +24,16 @@ if ($searchKey !== '') {
                OR group_name LIKE CONCAT('%', ?, '%') 
                OR subgroup_name LIKE CONCAT('%', ?, '%') 
                OR brand_name LIKE CONCAT('%', ?, '%') 
+               OR color_name LIKE CONCAT('%', ?, '%') 
+               OR style_name LIKE CONCAT('%', ?, '%') 
+               OR size_name LIKE CONCAT('%', ?, '%') 
+               OR description LIKE CONCAT('%', ?, '%') 
                OR status LIKE CONCAT('%', ?, '%'))";
-   $params .= 'ssssssss';
+   $params .= 'ssssssssssss';
+   $fields[] = $searchKey;
+   $fields[] = $searchKey;
+   $fields[] = $searchKey;
+   $fields[] = $searchKey;
    $fields[] = $searchKey;
    $fields[] = $searchKey;
    $fields[] = $searchKey;
@@ -126,11 +134,34 @@ if ($totalRecordsWithLimit > 0) {
          <td class="td-middle">' . htmlspecialchars($user['sp'] ?? '') . '</td>
       </tr>';
 
-      // Fetch item variations
+
+
+      // Fetch legacy/existing item variations if present
       $varHtml = '';
       $varStmt = $db->select("SELECT * FROM tbl_item_variations WHERE item_id = ? ORDER BY id ASC", "i", array($user['id']));
       if ($varStmt && $varStmt->num_rows() > 0) {
-         $varHtml .= '<div class="row mt-15"><div class="col-sm-12"><h5 class="text-primary"><strong>Item Variations & Variant Prices</strong></h5><table class="table table-bordered table-condensed table-striped mb-0"><thead><tr class="info"><th>Color</th><th>Size</th><th>Style / Design</th><th>Qty</th><th>CP</th><th>MRP</th><th>Disc %</th><th>Disc Amt</th><th>SP</th></tr></thead><tbody>';
+         $varHtml .= '<div class="row" style="margin-top: 15px;">
+            <div class="col-sm-12">
+               <div class="panel panel-info mb-10">
+                  <div class="panel-heading" style="padding: 8px 12px; font-weight: bold;">
+                     <i class="fa fa-cubes"></i> Item Variations & Variant Pricing
+                  </div>
+                  <div class="table-responsive">
+                     <table class="table table-bordered table-condensed table-striped mb-0">
+                        <thead>
+                           <tr class="info">
+                              <th>Color</th>
+                              <th>Size</th>
+                              <th>Style / Design</th>
+                              <th>Qty</th>
+                              <th>CP</th>
+                              <th>MRP</th>
+                              <th>Disc %</th>
+                              <th>Disc Amt</th>
+                              <th>SP</th>
+                           </tr>
+                        </thead>
+                        <tbody>';
          while ($vRow = $varStmt->fetch_assoc()) {
             $varHtml .= '<tr>
                <td>' . htmlspecialchars($vRow['color_name'] ?: '-') . '</td>
@@ -144,10 +175,22 @@ if ($totalRecordsWithLimit > 0) {
                <td>₹' . htmlspecialchars($vRow['sp'] ?: '0') . '</td>
             </tr>';
          }
-         $varHtml .= '</tbody></table></div></div>';
+         $varHtml .= '</tbody></table></div></div></div></div>';
       }
 
-      // Modal Details Window
+      $descHtml = '';
+      if (!empty($user['description'])) {
+         $descHtml = '<div class="row" style="margin-top: 10px;">
+            <div class="col-sm-12">
+               <div class="well well-sm" style="margin-bottom: 5px; background: #fafafa; border-left: 3px solid #009688;">
+                  <strong><i class="fa fa-align-left text-muted"></i> Description:</strong>
+                  <div style="margin-top: 4px; color: #444; white-space: pre-wrap;">' . nl2br(htmlspecialchars($user['description'])) . '</div>
+               </div>
+            </div>
+         </div>';
+      }
+
+      // Modal Details Window with ALL Data Fields
       $modalsHtml .= '<div class="modal fade" id="viewItemModal' . $user['id'] . '" tabindex="-1" role="dialog" aria-hidden="true">
          <div class="modal-dialog modal-lg">
             <div class="modal-content modal-content-rounded">
@@ -158,62 +201,138 @@ if ($totalRecordsWithLimit > 0) {
                   </h4>
                </div>
                <div class="modal-body modal-body-padded">
+                  <!-- Top Row: Images and Primary Info -->
                   <div class="row">
                      <div class="col-sm-4 text-center mb-15">
                         ' . $galleryHtml . '
+                        <div style="margin-top: 12px;">
+                           <span class="label label-info" style="font-size: 13px; padding: 4px 10px; display: inline-block;">
+                              <code>' . htmlspecialchars($user['item_code'] ?? '') . '</code>
+                           </span>
+                           <div style="margin-top: 8px;">' . $statusHtml . '</div>
+                        </div>
                      </div>
                      <div class="col-sm-8">
+                        <h4 style="margin-top: 0; font-weight: 700; color: #009688;">
+                           ' . htmlspecialchars($user['item_name'] ?? '') . '
+                        </h4>
                         <table class="table table-bordered table-striped mb-0">
                            <tbody>
                               <tr>
-                                 <th class="th-w-35">Item Code</th>
+                                 <th style="width: 35%; background: #f9f9f9;">Item Code</th>
                                  <td><code>' . htmlspecialchars($user['item_code'] ?? '') . '</code></td>
                               </tr>
                               <tr>
-                                 <th>Item Name</th>
-                                 <td><strong>' . htmlspecialchars($user['item_name'] ?? '') . '</strong></td>
+                                 <th style="background: #f9f9f9;">Barcode No</th>
+                                 <td>' . htmlspecialchars($user['barcode_no'] ?: '-') . '</td>
                               </tr>
                               <tr>
-                                 <th>Barcode No / SKU</th>
-                                 <td>' . htmlspecialchars($user['barcode_no'] ?? '') . ' / ' . htmlspecialchars($user['sku_no'] ?? '') . '</td>
+                                 <th style="background: #f9f9f9;">SKU No</th>
+                                 <td>' . htmlspecialchars($user['sku_no'] ?: '-') . '</td>
                               </tr>
                               <tr>
-                                 <th>Category / SubGroup</th>
-                                 <td>' . htmlspecialchars($user['group_name'] ?? '') . ' &rarr; ' . htmlspecialchars($user['subgroup_name'] ?? '') . '</td>
+                                 <th style="background: #f9f9f9;">Group / Category</th>
+                                 <td>' . htmlspecialchars($user['group_name'] ?: '-') . '</td>
                               </tr>
                               <tr>
-                                 <th>Brand / Style / Color / Size</th>
-                                 <td>' . htmlspecialchars($user['brand_name'] ?? '') . ' | ' . htmlspecialchars($user['style_name'] ?? '') . ' | ' . htmlspecialchars($user['color_name'] ?? '') . ' | ' . htmlspecialchars($user['size_name'] ?? '') . '</td>
+                                 <th style="background: #f9f9f9;">Sub Group</th>
+                                 <td>' . htmlspecialchars($user['subgroup_name'] ?: '-') . '</td>
                               </tr>
                               <tr>
-                                 <th>MRP / SP / Purchase Price</th>
-                                 <td><strong>MRP:</strong> ₹' . htmlspecialchars($user['mrp'] ?? '0') . ' | <strong>SP:</strong> ₹' . htmlspecialchars($user['sp'] ?? '0') . ' | <strong>CP:</strong> ₹' . htmlspecialchars($user['purchase_price'] ?? '0') . '</td>
+                                 <th style="background: #f9f9f9;">Brand Name</th>
+                                 <td>' . htmlspecialchars($user['brand_name'] ?: '-') . '</td>
                               </tr>
                               <tr>
-                                 <th>Discount / Profit</th>
-                                 <td>' . htmlspecialchars($user['dis_per'] ?? '0') . '% (₹' . htmlspecialchars($user['dis_amt'] ?? '0') . ') | Profit: ₹' . htmlspecialchars($user['profit_amt'] ?? '0') . '</td>
-                              </tr>
-                              <tr>
-                                 <th>Minimum Quantity</th>
-                                 <td>' . htmlspecialchars($user['min_qty'] ?? '0') . '</td>
-                              </tr>
-                              <tr>
-                                 <th>Measurement of Units</th>
-                                 <td>' . htmlspecialchars($user['mou_name'] ?? 'N/A') . '</td>
-                              </tr>
-                              <tr>
-                                 <th>Created / Updated</th>
-                                 <td>Created: ' . htmlspecialchars($user['created_date'] ?? 'N/A') . ' | Updated: ' . htmlspecialchars($user['update_date'] ?? 'N/A') . '</td>
-                              </tr>
-                              <tr>
-                                 <th>Status</th>
-                                 <td>' . $statusHtml . '</td>
+                                 <th style="background: #f9f9f9;">Measurement of Units (MOU)</th>
+                                 <td>' . htmlspecialchars($user['mou_name'] ?: '-') . '</td>
                               </tr>
                            </tbody>
                         </table>
                      </div>
                   </div>
+
+                  <!-- Middle Row: Specifications & Pricing Breakdown -->
+                  <div class="row" style="margin-top: 15px;">
+                     <div class="col-sm-6">
+                        <div class="panel panel-default mb-10">
+                           <div class="panel-heading" style="background: #f5f5f5; font-weight: bold; padding: 8px 12px;">
+                              <i class="fa fa-tags text-primary"></i> Specifications & Attributes
+                           </div>
+                           <table class="table table-bordered table-condensed mb-0">
+                              <tbody>
+                                 <tr>
+                                    <th style="width: 45%; background: #fafafa;">Size</th>
+                                    <td><strong>' . htmlspecialchars($user['size_name'] ?: '-') . '</strong></td>
+                                 </tr>
+                                 <tr>
+                                    <th style="background: #fafafa;">Color</th>
+                                    <td><strong>' . htmlspecialchars($user['color_name'] ?: '-') . '</strong></td>
+                                 </tr>
+                                 <tr>
+                                    <th style="background: #fafafa;">Style || Design</th>
+                                    <td><strong>' . htmlspecialchars($user['style_name'] ?: '-') . '</strong></td>
+                                 </tr>
+                                 <tr>
+                                    <th style="background: #fafafa;">Minimum Quantity</th>
+                                    <td>' . htmlspecialchars($user['min_qty'] !== '' ? $user['min_qty'] : '0') . '</td>
+                                 </tr>
+                                 <tr>
+                                    <th style="background: #fafafa;">Reorder Quantity</th>
+                                    <td>' . htmlspecialchars($user['reorder_qty'] !== '' ? $user['reorder_qty'] : '0') . '</td>
+                                 </tr>
+                              </tbody>
+                           </table>
+                        </div>
+                     </div>
+
+                     <div class="col-sm-6">
+                        <div class="panel panel-default mb-10">
+                           <div class="panel-heading" style="background: #f5f5f5; font-weight: bold; padding: 8px 12px;">
+                              <i class="fa fa-inr text-success"></i> Pricing & Profit Details
+                           </div>
+                           <table class="table table-bordered table-condensed mb-0">
+                              <tbody>
+                                 <tr>
+                                    <th style="width: 45%; background: #fafafa;">Purchase Price (CP)</th>
+                                    <td>₹' . htmlspecialchars($user['purchase_price'] !== '' ? $user['purchase_price'] : '0.00') . '</td>
+                                 </tr>
+                                 <tr>
+                                    <th style="background: #fafafa;">MRP</th>
+                                    <td><strong>₹' . htmlspecialchars($user['mrp'] !== '' ? $user['mrp'] : '0.00') . '</strong></td>
+                                 </tr>
+                                 <tr>
+                                    <th style="background: #fafafa;">Discount % / Amount</th>
+                                    <td>' . htmlspecialchars($user['dis_per'] !== '' ? $user['dis_per'] : '0') . '% (₹' . htmlspecialchars($user['dis_amt'] !== '' ? $user['dis_amt'] : '0.00') . ')</td>
+                                 </tr>
+                                 <tr>
+                                    <th style="background: #fafafa;">Selling Price (SP)</th>
+                                    <td><strong class="text-success" style="font-size: 14px;">₹' . htmlspecialchars($user['sp'] !== '' ? $user['sp'] : '0.00') . '</strong></td>
+                                 </tr>
+                                 <tr>
+                                    <th style="background: #fafafa;">Profit Amount</th>
+                                    <td><strong class="text-primary">₹' . htmlspecialchars($user['profit_amt'] !== '' ? $user['profit_amt'] : '0.00') . '</strong></td>
+                                 </tr>
+                              </tbody>
+                           </table>
+                        </div>
+                     </div>
+                  </div>
+
+                  <!-- Description Block -->
+                  ' . $descHtml . '
+
+                  <!-- Variations Block (if present) -->
                   ' . $varHtml . '
+
+                  <!-- Footer Timestamps -->
+                  <div class="row" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 8px;">
+                     <div class="col-sm-6 text-muted" style="font-size: 12px;">
+                        <i class="fa fa-calendar-plus-o"></i> <strong>Created:</strong> ' . htmlspecialchars($user['created_date'] ?: 'N/A') . '
+                     </div>
+                     <div class="col-sm-6 text-right text-muted" style="font-size: 12px;">
+                        <i class="fa fa-calendar-check-o"></i> <strong>Updated:</strong> ' . htmlspecialchars($user['update_date'] ?: 'N/A') . '
+                     </div>
+                  </div>
                </div>
                <div class="modal-footer modal-footer-light">
                   <a href="fh_itemmastercreation.php?update_id=' . $user['id'] . '" class="btn btn-info btn-sm">

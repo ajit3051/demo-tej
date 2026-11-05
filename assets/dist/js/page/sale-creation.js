@@ -76,12 +76,69 @@
         getAccountDetails($(this), 'ac_code');
     });
 
-    $(document).on('input', 'input[name="item_name"]', function () {
+    $(document).on('input', 'input[name="item_name"], #item_name', function () {
         let $this = $(this);
+        let term = $this.val().toLowerCase().trim();
+
+        // Real-time card block filter
+        let visibleCount = 0;
+        $('.item-card-item').each(function () {
+            let name    = String($(this).data('name') || '');
+            let barcode = String($(this).data('barcode') || '');
+            let article = String($(this).data('article') || '');
+            if (!term || name.indexOf(term) > -1 || barcode.indexOf(term) > -1 || article.indexOf(term) > -1) {
+                $(this).show();
+                visibleCount++;
+            } else {
+                $(this).hide();
+            }
+        });
+        if (visibleCount === 0) {
+            $('#noMatchMessage').show();
+        } else {
+            $('#noMatchMessage').hide();
+        }
+        $('#itemCountBadge').text(visibleCount + ' Items Available');
+
+        // Optional standard suggestions dropdown if needed
         getItemDetails($this, 'item_name');
     });
-    $(document).on('input', 'input[name="article_no"]', function () {
+
+    $(document).on('keydown', '#item_name', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            var val = $(this).val().trim();
+            let visibleCards = $('.item-card-item:visible');
+            if (val !== '' && visibleCards.length > 0) {
+                visibleCards.first().trigger('click');
+            } else {
+                triggerBillProceedIfItems();
+            }
+        }
+    });
+
+    $(document).on('input', 'input[name="article_no"], #article_no', function () {
         let $this = $(this);
+        let term = $this.val().toLowerCase().trim();
+
+        let visibleCount = 0;
+        $('.item-card-item').each(function () {
+            let article = String($(this).data('article') || '');
+            let barcode = String($(this).data('barcode') || '');
+            if (!term || article.indexOf(term) > -1 || barcode.indexOf(term) > -1) {
+                $(this).show();
+                visibleCount++;
+            } else {
+                $(this).hide();
+            }
+        });
+        if (visibleCount === 0) {
+            $('#noMatchMessage').show();
+        } else {
+            $('#noMatchMessage').hide();
+        }
+        $('#itemCountBadge').text(visibleCount + ' Items Available');
+
         getItemDetails($this, 'article_no');
     });
 
@@ -91,21 +148,83 @@
             var sku = $(this).val().trim();
             if (sku) {
                 showItemByArticle(sku);
+            } else {
+                triggerBillProceedIfItems();
             }
         }
     });
 
-
     $(document).click(function (e) {
-        if (!$(e.target).closest('#article_no, #item-name').length) {
-            $('#suggestions').hide();
+        if (!$(e.target).closest('#article_no, #item_name, #item-name').length) {
+            $('#suggestions_item_name, #suggestions_article_no, #suggestions').hide();
         }
     });
 
-    document.getElementById('barcode_number').addEventListener('keydown', function (event) {
-        if (event.key === 'Enter') {
-            event.preventDefault(); // Prevent the default action if needed
-            show_item_detail();
+    var barcodeInput = document.getElementById('barcode_number');
+    if (barcodeInput) {
+        barcodeInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                var barcode = $(this).val().trim();
+                if (barcode !== '') {
+                    show_item_detail();
+                } else {
+                    triggerBillProceedIfItems();
+                }
+            }
+        });
+    }
+
+    // Global Enter key listener: if one or more items are in list, Enter triggers Bill Proceed
+    $(document).on('keydown', function (e) {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            var target = e.target;
+            if (!target) return;
+            var tag = target.tagName ? target.tagName.toLowerCase() : '';
+
+            // Allow natural Enter inside textarea
+            if (tag === 'textarea') return;
+
+            // Allow natural Enter on buttons, links and action pills
+            if (tag === 'button' || $(target).is('button, a.btn, .btn-action-pill, .popup-btn')) return;
+
+            // Do not intercept if inside searchForm (bottom bill search)
+            if ($(target).closest('#searchForm').length) return;
+
+            // Do not intercept if modern popup or any modal is already active
+            if ($('#modernPopup-save').hasClass('active')) return;
+            if ($('#modernPopup-mrp').hasClass('active')) return;
+            if ($('#common-popup').is(':visible') && $('#common-popup').hasClass('in')) return;
+
+            // Handled separately above by specific element keydown listeners
+            if (target.id === 'barcode_number' || target.id === 'article_no' || target.id === 'item_name') {
+                return;
+            }
+
+            // If autocomplete suggestions dropdown is visible, let it handle selection
+            if ($('.autocomplete-suggestions:visible').length > 0) return;
+
+            // If one or more items added in list, trigger Bill Proceed button
+            if ($('#dataTable tr').length >= 1) {
+                e.preventDefault();
+                triggerBillProceedIfItems();
+            }
+        }
+    });
+
+    // Enter key inside payment popup triggers Save & Print, Esc key closes popup
+    $(document).on('keydown', '#modernPopup-save input', function (e) {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault();
+            validateAndSubmitPopup('print');
+        }
+    });
+
+    $(document).on('keydown', function (e) {
+        if (e.key === 'Escape' || e.keyCode === 27) {
+            if ($('#modernPopup-save').hasClass('active')) {
+                closePopupsave();
+            }
         }
     });
 
@@ -286,12 +405,30 @@ function getAjaxResults() {
     });
 }
 
-$(document).on('keyup input', '#searchForm input[name="search"], #searchForm #company_name', function() {
+function doSaleSearch() {
+    $("#searchForm").find('input[name=page]').val(1);
     getAjaxResults();
+}
+window.doSaleSearch = doSaleSearch;
+
+// Click on search icon/button
+$(document).on('click', '#saleSearchBtn, #searchForm .search-addon-btn', function(e) {
+    e.preventDefault();
+    doSaleSearch();
 });
+
+// Press Enter inside search input
+$(document).on('keydown', '#searchForm input[name="search"], #searchForm #company_name', function(e) {
+    if (e.which === 13 || e.keyCode === 13) {
+        e.preventDefault();
+        doSaleSearch();
+    }
+});
+
+// Form submit
 $(document).on('submit', '#searchForm', function(e) {
     e.preventDefault();
-    getAjaxResults();
+    doSaleSearch();
 });
 
 /* ── Optimized Suggestion Render Function ── */
@@ -393,10 +530,23 @@ function getItemDetails($this, type = '') {
     }
 }
 
-function show_item_detail() {
-    var barcode = $("#barcode_number").val().trim();
-    var gst_type = $('#gst_type').find(":selected").val();
-    var under_gst = $('#under_gst').find(":selected").val();
+function selectItemCard(barcode, cardEl) {
+    if (!barcode) return;
+    if (cardEl) {
+        $(cardEl).addClass('card-added-flash');
+        setTimeout(function() {
+            $(cardEl).removeClass('card-added-flash');
+        }, 600);
+    }
+    show_item_detail(barcode);
+}
+
+function show_item_detail(customBarcode) {
+    var barcode = (customBarcode !== undefined && customBarcode !== null && customBarcode !== '') ? String(customBarcode).trim() : $("#barcode_number").val().trim();
+    if (!barcode) return;
+
+    var gst_type = $('#gst_type').find(":selected").val() || 'Inclusive';
+    var under_gst = $('#under_gst').find(":selected").val() || 'Local';
     var trcount = parseInt($('#dataTable tr').length);
 
     $.ajax({
@@ -411,6 +561,11 @@ function show_item_detail() {
                 $("#article_no").val('');
                 $('#barcode_number').focus();
 
+                // Reset card block filters
+                $('.item-card-item').show();
+                $('#noMatchMessage').hide();
+                $('#itemCountBadge').text($('.item-card-item').length + ' Items Available');
+
                 // safe attribute-based lookup instead of ID selector
                 var existingRow = $('#dataTable tr[data-barcode="' + barcode + '"]');
 
@@ -419,10 +574,25 @@ function show_item_detail() {
                     let newQty = parseInt(qtyInput.val()) + 1;
                     qtyInput.val(newQty);
                     updateTotalPrice(existingRow, gst_type, 1);
+
+                    // Visual highlight on updated row
+                    existingRow.css('transition', 'background-color 0.4s').css('background-color', '#dcfce7');
+                    setTimeout(function() {
+                        existingRow.css('background-color', '');
+                    }, 800);
                 } else {
-                    $('#dataTable').append(result.html);
+                    var newRow = $(result.html);
+                    $('#dataTable').append(newRow);
                     total_hidden_posted();
+
+                    // Visual highlight on new row
+                    newRow.css('transition', 'background-color 0.4s').css('background-color', '#dcfce7');
+                    setTimeout(function() {
+                        newRow.css('background-color', '');
+                    }, 800);
                 }
+            } else {
+                alert(result.message || 'Item not found for barcode: ' + barcode);
             }
         }
     });
@@ -997,11 +1167,56 @@ function closePopupmrp() {
 
 
 // ============================================================================
-// POPUP SAVE FUNCTIONS
+// POPUP SAVE FUNCTIONS & TRIGGER PROCEED
 // ============================================================================
+function triggerBillProceedIfItems() {
+    var rowCount = $('#dataTable tr').length;
+    if (rowCount >= 1) {
+        if ($('#modernPopup-save').hasClass('active')) {
+            return false;
+        }
+        var confirmBtn = document.getElementById('confirmbtn');
+        if (confirmBtn) {
+            confirmBtn.click();
+            return true;
+        } else if (typeof openPopupsave === 'function') {
+            openPopupsave();
+            return true;
+        }
+    }
+    return false;
+}
+window.triggerBillProceedIfItems = triggerBillProceedIfItems;
+
+function syncPrintOption(val) {
+    var mainRadio = document.querySelector('input[name="print_option"][value="' + val + '"]');
+    if (mainRadio) mainRadio.checked = true;
+    var popupRadio = document.querySelector('input[name="popup_print_option"][value="' + val + '"]');
+    if (popupRadio) popupRadio.checked = true;
+}
+
 function openPopupsave(){
     updatePopupBillAmount();
+    var mainOption = document.querySelector('input[name="print_option"]:checked');
+    if (mainOption) {
+        var popupRadio = document.querySelector('input[name="popup_print_option"][value="' + mainOption.value + '"]');
+        if (popupRadio) popupRadio.checked = true;
+    }
+    // Configurable default payment mode from config.php ($DEFAULT_PAYMENT_MODE)
+    var configuredPayMode = (typeof DEFAULT_PAYMENT_MODE !== 'undefined' && DEFAULT_PAYMENT_MODE) ? DEFAULT_PAYMENT_MODE : 'CASH';
+
+    var payModeSelect = document.getElementById('payment_mode_select');
+    if (payModeSelect) {
+        if (!payModeSelect.value) {
+            payModeSelect.value = configuredPayMode;
+        }
+        handlePaymentMode(payModeSelect.value);
+    }
     document.getElementById("modernPopup-save").classList.add("active");
+    setTimeout(function() {
+        var activeInput = document.querySelector('#modernPopup-save input:not([disabled]):not([readonly])');
+        if (activeInput) activeInput.focus();
+    }, 120);
 }
 
 function closePopupsave(){
@@ -1054,6 +1269,11 @@ function validateAndSubmitPopup(actionType) {
     var isPrintField = document.getElementById('is_print_hidden');
     if (isPrintField) {
         isPrintField.value = (actionType === 'print') ? '1' : '0';
+    }
+
+    var selectedPrint = document.querySelector('input[name="popup_print_option"]:checked');
+    if (selectedPrint) {
+        syncPrintOption(selectedPrint.value);
     }
 
     ['payment_mode_select','pay_cash','pay_upi','pay_card','pay_credit'].forEach(function(id){

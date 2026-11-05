@@ -16,9 +16,9 @@ $params = '';
 $fields = array();
 
 if ($exportType) {
-   $columns = 'ANY_VALUE(purchage_date) as purchage_date, bill_number, ANY_VALUE(account_name) as account_name, ANY_VALUE(pay_mode) as pay_mode, ANY_VALUE(gst_type) as gst_type, SUM(gst_amount) as gst_amount, SUM(amount) as amount, ANY_VALUE(status) as status';
+   $columns = 'MAX(purchage_date) as purchage_date, bill_number, MAX(account_name) as account_name, MAX(pay_mode) as pay_mode, MAX(gst_type) as gst_type, SUM(gst_amount) as gst_amount, SUM(amount) as amount, MAX(status) as status';
 } else {
-   $columns = 'ANY_VALUE(id) as id, ANY_VALUE(purchage_date) as purchage_date, bill_number, ANY_VALUE(account_name) as account_name, ANY_VALUE(pay_mode) as pay_mode, ANY_VALUE(gst_type) as gst_type, SUM(gst_amount) as gst_amount, SUM(amount) as amount, ANY_VALUE(status) as status';
+   $columns = 'MAX(id) as id, MAX(purchage_date) as purchage_date, bill_number, MAX(account_name) as account_name, MAX(pay_mode) as pay_mode, MAX(gst_type) as gst_type, SUM(gst_amount) as gst_amount, SUM(amount) as amount, MAX(status) as status';
 }
 
 $query = "SELECT $columns FROM tbl_bill GROUP BY bill_number";
@@ -89,7 +89,7 @@ if ($totalRecordsWithLimit > 0) {
             <a class="btn-add btn-xs" onclick="view_invoice(' . $row['id'] . ');" href="javascript:void(0);" data-toggle="tooltip" title="View Invoice"><span class="fa fa-file"></span></a>
             <a href="https://api.whatsapp.com/send?text=' . urlencode('Bill No: ' . $row['bill_number']) . '" target="_blank" class="btn-add btn-xs" style="background-color:#25D366; border-color:#25D366;" data-toggle="tooltip" title="WhatsApp"><span class="fa fa-whatsapp"></span></a>
             <a role="button" class="btn-add btn-xs" onclick="sendMail(\'' . $row['bill_number'] . '\');" data-toggle="tooltip" title="Send Email"><span class="fa fa-envelope"></span></a>
-            <a href="bill-invoice.php?type=sale&bill_no=' . urlencode($row['bill_number']) . '&auto_print=1" target="_blank" class="btn-add btn-xs" data-toggle="tooltip" title="Print Invoice"><span class="fa fa-print"></span></a>
+            <a href="bill-invoice?type=sale&bill_no=' . urlencode($row['bill_number']) . '&auto_print=1" target="_blank" class="btn-add btn-xs" data-toggle="tooltip" title="Print Invoice"><span class="fa fa-print"></span></a>
          </td>
          <td>
             <a class="" onClick="return confirm(\'Are you sure you want to Update Bill?\')" href="sale-creations.php?bill_no=' . $row['bill_number'] . '"><button data-toggle="tooltip" title="Update Bill" type="button" class="btn-add btn-xs"><i class="fa fa-pencil"></i><span style=""></span></button></a>

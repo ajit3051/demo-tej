@@ -122,7 +122,6 @@ if ($totalRecordsWithLimit > 0) {
             <a role="button" class="btn-add btn-xs" style="background-color:#0072c6; border-color:#0072c6;" onclick="sendMail(\'' . htmlspecialchars($row['bill_number'] ?? '') . '\');" data-toggle="tooltip" title="Send Email"><i class="fa fa-envelope"></i></a>
          </td>
           <td style="white-space: nowrap;">
-             <a role="button" class="btn-add btn-xs" style="background-color:#f0ad4e; border-color:#eea236; color:#fff;" onclick="openStockTransferModal(' . ($row['id'] ?? 0) . ');" data-toggle="tooltip" title="Stock Transfer"><i class="fa fa-exchange"></i></a>
              <a onClick="return confirm(\'Are you sure you want to Update Bill?\')" href="purchase-master-creation.php?bill_no=' . urlencode($row['bill_number'] ?? '') . '" class="btn-add btn-xs" style="background-color:#337ab7; border-color:#2e6da4;" data-toggle="tooltip" title="Update Bill"><i class="fa fa-pencil"></i></a>
              <a class="btn btn-danger btn-xs" onclick="deleterecord(' . ($row['id'] ?? 0) . ')" href="javascript:void(0);" data-toggle="tooltip" title="Delete"><i class="fa fa-trash"></i></a>
           </td>

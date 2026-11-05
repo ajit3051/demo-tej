@@ -114,15 +114,7 @@
     $(document).on('click', '.emp-details', function () {
         var itemId = $(this).attr('item_id');
         $('.autocomplete-suggestions').hide();
-        // If clicked from article_no suggestions, use sku lookup
-        if ($(this).closest('#suggestions_article_no').length) {
-            showItemByArticleId(itemId);
-        } else {
-            var rowObject = $(this).text();
-            var barcode = rowObject.split(',')[2].trim();
-            $('#barcode_number').val(barcode);
-            show_item_detail();
-        }
+        showItemById(itemId);
     });
 
     $('.extra-charge').on('input', function (e) {
@@ -274,12 +266,30 @@ function getAjaxResults() {
     });
 }
 
-$(document).on('keyup input', '#searchForm input[name="search"], #searchForm #company_name', function() {
+function doPurchaseSearch() {
+    $("#searchForm").find('input[name=page]').val(1);
     getAjaxResults();
+}
+window.doPurchaseSearch = doPurchaseSearch;
+
+// Click on search icon/button
+$(document).on('click', '#purchaseSearchBtn, #searchForm .search-addon-btn', function(e) {
+    e.preventDefault();
+    doPurchaseSearch();
 });
+
+// Press Enter inside search input
+$(document).on('keydown', '#searchForm input[name="search"], #searchForm #company_name', function(e) {
+    if (e.which === 13 || e.keyCode === 13) {
+        e.preventDefault();
+        doPurchaseSearch();
+    }
+});
+
+// Form submit
 $(document).on('submit', '#searchForm', function(e) {
     e.preventDefault();
-    getAjaxResults();
+    doPurchaseSearch();
 });
 
 /* ── Optimized Suggestion Render Function ── */
@@ -407,8 +417,8 @@ function show_item_detail() {
                 $("#article_no").val('');
                 $('#barcode_number').focus();
 
-                var existingRow = $('#row_' + barcode);
-                //alert(existingRow.length);
+                var rowKey = result.row_key || result.barcode_no || barcode;
+                var existingRow = $('#row_' + rowKey);
                 if (existingRow.length) {
                     let qtyInput = existingRow.find('.qtyval');
                     let newQty = parseInt(qtyInput.val()) + 1;
@@ -758,7 +768,8 @@ function showItemByArticle(sku) {
             if (result.status === true) {
                 $('#article_no').val('');
                 $('#barcode_number').focus();
-                var existingRow = $('#row_' + result.barcode_no);
+                var rowKey = result.row_key || result.barcode_no || ('item_' + result.id);
+                var existingRow = $('#row_' + rowKey);
                 if (existingRow.length) {
                     var qtyInput = existingRow.find('.qtyval');
                     qtyInput.val(parseInt(qtyInput.val()) + 1);
@@ -774,20 +785,46 @@ function showItemByArticle(sku) {
     });
 }
 
-function showItemByArticleId(itemId) {
+function showItemById(itemId) {
+    var gst_type  = $('#gst_type').find(':selected').val();
+    var under_gst = $('#under_gst').find(':selected').val();
+    var trcount   = parseInt($('#dataTable tr').length);
+
     $.ajax({
-        url: 'get_ajaxdata?function=get_item_details',
-        method: 'POST',
-        data: { term: itemId, type: 'id' },
-        success: function(res) {
-            var result = JSON.parse(res);
-            if (result.status) {
-                var barcode = result.suggestions[0]['Barcode No.'];
-                $('#barcode_number').val(barcode);
-                show_item_detail();
+        type: 'POST',
+        dataType: 'json',
+        url: 'get_ajaxdata?function=get_item_info',
+        data: {
+            item_id: itemId,
+            gst_type: gst_type,
+            under_gst: under_gst,
+            trcount: trcount,
+            act: 'get_item_info'
+        },
+        success: function (result) {
+            if (result.status === true) {
+                $('#barcode_number').val('');
+                $('#item_name').val('');
+                $('#article_no').val('');
+                $('#barcode_number').focus();
+
+                var rowKey = result.row_key || result.barcode_no || ('item_' + result.id);
+                var existingRow = $('#row_' + rowKey);
+                if (existingRow.length) {
+                    var qtyInput = existingRow.find('.qtyval');
+                    qtyInput.val(parseInt(qtyInput.val()) + 1);
+                    updateTotalPrice(existingRow, gst_type, 1);
+                } else {
+                    $('#dataTable').append(result.html);
+                    total_hidden_posted();
+                }
             }
         }
     });
+}
+
+function showItemByArticleId(itemId) {
+    showItemById(itemId);
 }
 
 /* ── Fix 4: Popup A/C Code / Mobile / Name autofill ─────────────────────── */

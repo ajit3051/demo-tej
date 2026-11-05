@@ -132,12 +132,19 @@
             $picture = '';
          }
    
+         $generated_barcodes = [];
          foreach ((array)$barcode_no as $k => $barcode) {
             $gst_val = !empty($gst[$k]) ? $gst[$k] : 0;
             $othergstvalue = getGSTValueBygstType($gst[$k] ?? 0);
             $cgst = $othergstvalue;
             $sgst = $othergstvalue;
-   
+
+            $current_barcode = trim((string)$barcode);
+            if ($current_barcode === '') {
+               $current_barcode = generateAutoBarcode($db, $generated_barcodes);
+               $generated_barcodes[] = $current_barcode;
+            }
+
             $insertid = $db->insert('INSERT INTO tbl_purchase (
                purchage_date, bill_number, gst_type, under_gst, bill_type,
                account_name, mobile_number, ac_code, payment_mode, pay_cash,
@@ -163,9 +170,9 @@
                   ?,?,?,?,?,?,
                   ?,?,?,?,
                   ?,?,?,?,
-                  ?,?,?,?,
+                  ?,?,?,?,?,?,
                   ?,?,?,?,?,?,?,
-                  ?,?
+                  ?
                )',
                str_repeat('s', 59),
                $purchage_date, $bill_number, $gst_type, $under_gst, $bill_type,
@@ -174,7 +181,7 @@
                $packing_amount, $delivery_amount, $other_amount, $labour_amount,
                $percent_total_discount, $discount_total_amount,
                $invoice_number, $invoice_date, $remarks, $status, $picture,
-               $item_name[$k] ?? '', $barcode, $item_type[$k] ?? '', $article_no[$k] ?? '',
+               $item_name[$k] ?? '', $current_barcode, $item_type[$k] ?? '', $article_no[$k] ?? '',
                $category[$k] ?? '', $sub_category[$k] ?? '', $brand[$k] ?? '', $color[$k] ?? '', $style[$k] ?? '', $size[$k] ?? '',
                $bbr_qty[$k] ?? '0', $qty[$k] ?? '1', $mou_name[$k] ?? '', $rate[$k] ?? '',
                $purchase_price[$k] ?? '0', $percent_discount[$k] ?? '0', $discount_amt[$k] ?? '0', $after_pp[$k] ?? ($purchase_price[$k] ?? '0'),
@@ -182,6 +189,18 @@
                $net_price[$k] ?? '0', $gst[$k] ?? '0', $cgst, $sgst, $gst_amount[$k] ?? '0', $taxable_amount[$k] ?? '0', $amount[$k] ?? '0',
                $current_date
             );
+
+            // Sync generated barcode to tbl_item_master if master barcode is blank
+            if (!empty($current_barcode)) {
+               $rowItemName = trim((string)($item_name[$k] ?? ''));
+               $rowArticleNo = trim((string)($article_no[$k] ?? ''));
+               if ($rowArticleNo !== '') {
+                  $db->update("UPDATE tbl_item_master SET barcode_no=? WHERE (barcode_no IS NULL OR barcode_no='') AND sku_no=?", 'ss', $current_barcode, $rowArticleNo);
+               }
+               if ($rowItemName !== '') {
+                  $db->update("UPDATE tbl_item_master SET barcode_no=? WHERE (barcode_no IS NULL OR barcode_no='') AND item_name=?", 'ss', $current_barcode, $rowItemName);
+               }
+            }
          }
    
          if ($insertid) {
@@ -207,6 +226,7 @@
          }
    
          $item_id = $_POST['item_id'] ?? [];
+         $generated_barcodes = [];
          foreach ((array)$barcode_no as $k => $barcode) {
 
             $othergstvalue = getGSTValueBygstType($gst[$k] ?? 0);
@@ -214,8 +234,24 @@
             $sgst = $othergstvalue;
    
             $isExist = $item_id[$k] ?? '';
-   
+            $current_barcode = trim((string)$barcode);
+
             if ($isExist) {
+
+               if ($current_barcode === '') {
+                  $chk = $db->select("SELECT barcode_number FROM tbl_purchase WHERE id=?", 'i', $isExist);
+                  $existing_bc = '';
+                  if ($chk && $chk->num_rows() > 0) {
+                     $existing_row = $chk->fetch_assoc();
+                     $existing_bc = trim((string)($existing_row['barcode_number'] ?? ''));
+                  }
+                  if ($existing_bc !== '') {
+                     $current_barcode = $existing_bc;
+                  } else {
+                     $current_barcode = generateAutoBarcode($db, $generated_barcodes);
+                     $generated_barcodes[] = $current_barcode;
+                  }
+               }
    
                $insertid = $db->update(
                   "UPDATE tbl_purchase SET
@@ -240,7 +276,7 @@
                   $packing_amount, $delivery_amount, $other_amount, $labour_amount,
                   $percent_total_discount, $discount_total_amount,
                   $invoice_number, $invoice_date, $remarks, $status, $picture,
-                  $item_name[$k] ?? '', $barcode, $item_type[$k] ?? '', $article_no[$k] ?? '',
+                  $item_name[$k] ?? '', $current_barcode, $item_type[$k] ?? '', $article_no[$k] ?? '',
                   $category[$k] ?? '', $sub_category[$k] ?? '', $brand[$k] ?? '', $color[$k] ?? '', $style[$k] ?? '', $size[$k] ?? '',
                   $bbr_qty[$k] ?? '0', $qty[$k] ?? '1', $mou_name[$k] ?? '', $rate[$k] ?? '',
                   $purchase_price[$k] ?? '0', $percent_discount[$k] ?? '0', $discount_amt[$k] ?? '0', $after_pp[$k] ?? ($purchase_price[$k] ?? '0'),
@@ -251,6 +287,11 @@
                   );
             } else {
    
+               if ($current_barcode === '') {
+                  $current_barcode = generateAutoBarcode($db, $generated_barcodes);
+                  $generated_barcodes[] = $current_barcode;
+               }
+
                $insertid = $db->insert('INSERT INTO tbl_purchase (
                   purchage_date, bill_number, gst_type, under_gst, bill_type,
                   account_name, mobile_number, ac_code, payment_mode, pay_cash,
@@ -276,9 +317,9 @@
                      ?,?,?,?,?,?,
                      ?,?,?,?,
                      ?,?,?,?,
-                     ?,?,?,?,
+                     ?,?,?,?,?,?,
                      ?,?,?,?,?,?,?,
-                     ?,?
+                     ?
                   )',
                   str_repeat('s', 59),
                   $purchage_date, $bill_number, $gst_type, $under_gst, $bill_type,
@@ -287,7 +328,7 @@
                   $packing_amount, $delivery_amount, $other_amount, $labour_amount,
                   $percent_total_discount, $discount_total_amount,
                   $invoice_number, $invoice_date, $remarks, $status, $picture,
-                  $item_name[$k] ?? '', $barcode, $item_type[$k] ?? '', $article_no[$k] ?? '',
+                  $item_name[$k] ?? '', $current_barcode, $item_type[$k] ?? '', $article_no[$k] ?? '',
                   $category[$k] ?? '', $sub_category[$k] ?? '', $brand[$k] ?? '', $color[$k] ?? '', $style[$k] ?? '', $size[$k] ?? '',
                   $bbr_qty[$k] ?? '0', $qty[$k] ?? '1', $mou_name[$k] ?? '', $rate[$k] ?? '',
                   $purchase_price[$k] ?? '0', $percent_discount[$k] ?? '0', $discount_amt[$k] ?? '0', $after_pp[$k] ?? ($purchase_price[$k] ?? '0'),
@@ -295,6 +336,18 @@
                   $net_price[$k] ?? '0', $gst[$k] ?? '0', $cgst, $sgst, $gst_amount[$k] ?? '0', $taxable_amount[$k] ?? '0', $amount[$k] ?? '0',
                   $current_date
                );
+            }
+
+            // Sync generated barcode to tbl_item_master if master barcode is blank
+            if (!empty($current_barcode)) {
+               $rowItemName = trim((string)($item_name[$k] ?? ''));
+               $rowArticleNo = trim((string)($article_no[$k] ?? ''));
+               if ($rowArticleNo !== '') {
+                  $db->update("UPDATE tbl_item_master SET barcode_no=? WHERE (barcode_no IS NULL OR barcode_no='') AND sku_no=?", 'ss', $current_barcode, $rowArticleNo);
+               }
+               if ($rowItemName !== '') {
+                  $db->update("UPDATE tbl_item_master SET barcode_no=? WHERE (barcode_no IS NULL OR barcode_no='') AND item_name=?", 'ss', $current_barcode, $rowItemName);
+               }
             }
          }
    
@@ -1103,7 +1156,7 @@
                                   <?= $i; ?>
                                   <input type="hidden" name="item_id[]" value="<?= $item['id'] ?>">
                                </td>
-                               <td><input type="text" class="form-control valid" value="<?= $item['barcode_number']; ?>" name="barcode_no[]" required readonly></td>
+                               <td><input type="text" class="form-control valid" value="<?= $item['barcode_number']; ?>" name="barcode_no[]" readonly placeholder="Auto-generate"></td>
                                <td><input type="text" class="form-control valid" value="<?= $item['article_no']; ?>" name="article_no[]" required readonly></td>
                                <td><input type="text" class="form-control valid" value="<?= $item['item_name']; ?>" name="item_name[]" required readonly><input type="hidden" name="item_type[]" value="<?= htmlspecialchars($item['item_type'] ?? '') ?>"></td>
                                <td class="group-td">
@@ -1339,6 +1392,7 @@
                       </div>
                    </div>
                   <br>
+                  </div>
                   <!-- ===== PAYMENT MODE POPUP (inside form so data POSTs with main form) ===== -->
                   <style>
                      #modernPopup-save .popup-box {
@@ -1722,6 +1776,7 @@
          </div>
       </div>
    </div>
+</section>
 <section class="content">
    <div class="row">
       <div class="col-sm-12">
@@ -1763,7 +1818,7 @@
                          <input type="hidden" name="sortField" value="id" />
                          <div class="input-group search-box-group">
                             <input type="text" class="form-control search-input search-input-field" name="search" id="company_name" placeholder="Search Recent Purchases..." autocomplete="off">
-                            <span class="input-group-addon search-addon-btn">
+                            <span class="input-group-addon search-addon-btn" id="purchaseSearchBtn" onclick="doPurchaseSearch()" style="cursor: pointer;" title="Click to search">
                                <i class="fa fa-search search-icon-sm"></i>
                             </span>
                          </div>
@@ -1838,7 +1893,7 @@
    <input type="hidden" name="id" id="deleteid">
 </form>
 <?php include('include/footer-2.php'); ?>
-<script src="assets/dist/js/page/purchage-master.js" type="text/javascript"></script>
+<script src="assets/dist/js/page/purchage-master.js?v=<?= time(); ?>" type="text/javascript"></script>
 <!-- /.content -->
 <script>
    function view_details(id) {

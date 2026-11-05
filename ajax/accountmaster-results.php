@@ -1,41 +1,30 @@
 <?php
-include_once('../include/config.php');
+include_once(__DIR__ . '/../include/config.php');
 
 $search = isset($_POST['search']) ? trim($_POST['search']) : '';
 $page = isset($_POST['page']) && (int)$_POST['page'] > 0 ? (int)$_POST['page'] : 1;
 $perPage = isset($_SESSION["_RECORDPERPAGE_"]) && $_SESSION["_RECORDPERPAGE_"] ? (int)$_SESSION["_RECORDPERPAGE_"] : 20;
 $offset = ($page - 1) * $perPage;
 
-$whereClauses = array();
-$params = array();
-
-if ($search !== '') {
-    $whereClauses[] = "(account_code LIKE ? OR account_name LIKE ? OR contact_name LIKE ? OR group_name LIKE ? OR mobile_no_1 LIKE ? OR gst_no LIKE ? OR location_1 LIKE ? OR party_type LIKE ?)";
-    $searchTerm = '%' . $search . '%';
-    for ($k = 0; $k < 8; $k++) {
-        $params[] = $searchTerm;
-    }
-}
-
 $whereSql = '';
-if (count($whereClauses) > 0) {
-    $whereSql = ' WHERE ' . implode(' AND ', $whereClauses);
+if ($search !== '') {
+    $s = mysqli_real_escape_string($conn, $search);
+    $whereSql = " WHERE (account_code LIKE '%$s%' OR account_name LIKE '%$s%' OR contact_name LIKE '%$s%' OR group_name LIKE '%$s%' OR mobile_no_1 LIKE '%$s%' OR gst_no LIKE '%$s%' OR location_1 LIKE '%$s%' OR party_type LIKE '%$s%')";
 }
 
 // Count total
-$countQuery = "SELECT COUNT(*) as total FROM tbl_account_master" . $whereSql;
-$countRes = $db->select($countQuery, $params, 'COUNT');
-$totalRecords = isset($countRes[0]['total']) ? (int)$countRes[0]['total'] : 0;
+$countQuery = mysqli_query($conn, "SELECT COUNT(*) as total FROM tbl_account_master" . $whereSql);
+$countRow = mysqli_fetch_assoc($countQuery);
+$totalRecords = isset($countRow['total']) ? (int)$countRow['total'] : 0;
 $totalPages = ceil($totalRecords / $perPage);
 
 // Fetch page results
-$dataQuery = "SELECT * FROM tbl_account_master" . $whereSql . " ORDER BY id DESC LIMIT $offset, $perPage";
-$rows = $db->select($dataQuery, $params, 'FETCH');
+$dataQuery = mysqli_query($conn, "SELECT * FROM tbl_account_master" . $whereSql . " ORDER BY id DESC LIMIT $offset, $perPage");
 
 ob_start();
-if (!empty($rows)) {
+if ($dataQuery && mysqli_num_rows($dataQuery) > 0) {
     $i = $offset + 1;
-    foreach ($rows as $user) {
+    while ($user = mysqli_fetch_assoc($dataQuery)) {
         $statusBadge = ($user['status'] ?? 'Active') === 'Active' 
             ? '<span class="label label-success badge-status-sm">Active</span>' 
             : '<span class="label label-danger badge-status-sm">Inactive</span>';
@@ -45,6 +34,9 @@ if (!empty($rows)) {
             <td class="td-center-middle-nowrap">
                 <a class="btn btn-info btn-xs" data-toggle="tooltip" title="Edit Account" href="fh_accountmastercreation.php?update_id=<?php echo $user['id']; ?>">
                     <i class="fa fa-pencil"></i> Edit
+                </a>
+                <a class="btn btn-warning btn-xs" data-toggle="tooltip" title="View Ledger" href="fh_account_ledger.php?account_code=<?php echo urlencode($user['account_code'] ?? ''); ?>&account_id=<?php echo $user['id']; ?>">
+                    <i class="fa fa-book"></i> Ledger
                 </a>
                 <a class="btn btn-danger btn-xs" data-toggle="tooltip" title="Delete Account" href="fh_accountmastercreation_list.php?delete_id=<?php echo $user['id']; ?>" onclick="return confirm('Are you sure you want to delete this record?');">
                     <i class="fa fa-trash-o"></i> Delete

@@ -84,6 +84,56 @@ function generateBillNo($table, $column, $prefix)
     return ucwords($prefix) . '-' . sprintf('%04d', $billno);
 }
 
+function generateAutoBarcode($db = null, $excludeList = [])
+{
+    if (!$db) {
+        $db = connect();
+    }
+    static $lastGenerated = null;
+
+    if ($lastGenerated === null) {
+        $maxVal = 10000000;
+
+        $q1 = $db->select("SELECT MAX(CAST(barcode_number AS UNSIGNED)) AS max_bc FROM tbl_purchase WHERE barcode_number REGEXP '^[0-9]{8,12}$'");
+        if ($q1 && $r1 = $q1->fetch_assoc()) {
+            if (!empty($r1['max_bc']) && (int)$r1['max_bc'] > $maxVal) {
+                $maxVal = (int)$r1['max_bc'];
+            }
+        }
+
+        $q2 = $db->select("SELECT MAX(CAST(barcode_no AS UNSIGNED)) AS max_bc FROM tbl_item_master WHERE barcode_no REGEXP '^[0-9]{8,12}$'");
+        if ($q2 && $r2 = $q2->fetch_assoc()) {
+            if (!empty($r2['max_bc']) && (int)$r2['max_bc'] > $maxVal) {
+                $maxVal = (int)$r2['max_bc'];
+            }
+        }
+
+        $lastGenerated = $maxVal;
+    }
+
+    do {
+        $lastGenerated++;
+        $candidate = (string)$lastGenerated;
+
+        if (in_array($candidate, (array)$excludeList, true)) {
+            continue;
+        }
+
+        $check1 = $db->select("SELECT id FROM tbl_purchase WHERE barcode_number=? LIMIT 1", 's', $candidate);
+        if ($check1 && $check1->num_rows() > 0) {
+            continue;
+        }
+
+        $check2 = $db->select("SELECT id FROM tbl_item_master WHERE barcode_no=? LIMIT 1", 's', $candidate);
+        if ($check2 && $check2->num_rows() > 0) {
+            continue;
+        }
+
+        return $candidate;
+    } while (true);
+}
+
+
 function countRecords($table, $column)
 {
     $db = connect();

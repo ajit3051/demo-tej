@@ -1,15 +1,33 @@
 (function ($) {
     "use strict";
 
-    // Handle keyup / search input change
-    $("body").on("keyup change", ".search-input", function (e) {
-        var $this = $(this);
-        var formid = $this.closest("form").attr("id");
-        if (!formid) {
-            formid = "itemMasterSearchForm";
-        }
+    // Reusable search function
+    function doItemMasterSearch(formid) {
+        formid = formid || "itemMasterSearchForm";
         $("#" + formid).find("input[name=page]").val(1);
         getItemAjaxResults(formid);
+    }
+
+    // Handle clicking search button addon / icon
+    $("body").on("click", "#itemMasterSearchBtn, .search-addon-btn", function (e) {
+        e.preventDefault();
+        var formid = $(this).closest("form").attr("id") || "itemMasterSearchForm";
+        doItemMasterSearch(formid);
+    });
+
+    // Handle Enter key inside search input
+    $("body").on("keydown", "#itemMasterSearchForm .search-input", function (e) {
+        if (e.which === 13 || e.keyCode === 13) {
+            e.preventDefault();
+            var formid = $(this).closest("form").attr("id") || "itemMasterSearchForm";
+            doItemMasterSearch(formid);
+        }
+    });
+
+    // Handle search form submission (e.g. Enter pressed or submit triggered)
+    $("body").on("submit", "#itemMasterSearchForm", function (e) {
+        e.preventDefault();
+        doItemMasterSearch("itemMasterSearchForm");
     });
 
     // Handle Pagination click
@@ -19,10 +37,7 @@
         var pageNo = $this.attr("href");
 
         if (pageNo && pageNo !== "#" && pageNo !== "javascript:void(0);") {
-            var formid = $this.closest("section").find("form").attr("id");
-            if (!formid) {
-                formid = "itemMasterSearchForm";
-            }
+            var formid = $this.closest("section").find("form").attr("id") || "itemMasterSearchForm";
             $("#" + formid).find("input[name=page]").val(pageNo);
             getItemAjaxResults(formid);
         }

@@ -17,24 +17,24 @@ $params = '';
 $fields = array();
 
 if ($exportType) {
-   $columns = "ANY_VALUE(purchage_date) as purchage_date, 
+   $columns = "MAX(purchage_date) as purchage_date, 
                bill_number, 
-               ANY_VALUE(invoice_number) as invoice_number, 
-               ANY_VALUE(account_name) as account_name, 
-               ANY_VALUE(gst_type) as gst_type, 
+               MAX(invoice_number) as invoice_number, 
+               MAX(account_name) as account_name, 
+               MAX(gst_type) as gst_type, 
                SUM(gst_amount) as gst_amount, 
                SUM(amount) as amount, 
-               ANY_VALUE(status) as status";
+               MAX(status) as status";
 } else {
-   $columns = "ANY_VALUE(id) as id, 
-               ANY_VALUE(invoice_number) as invoice_number, 
-               ANY_VALUE(purchage_date) as purchage_date, 
+   $columns = "MAX(id) as id, 
+               MAX(invoice_number) as invoice_number, 
+               MAX(purchage_date) as purchage_date, 
                bill_number, 
-               ANY_VALUE(account_name) as account_name, 
-               ANY_VALUE(gst_type) as gst_type, 
+               MAX(account_name) as account_name, 
+               MAX(gst_type) as gst_type, 
                SUM(gst_amount) as gst_amount, 
                SUM(amount) as amount, 
-               ANY_VALUE(status) as status";
+               MAX(status) as status";
 }
 
 $whereClause = "";
