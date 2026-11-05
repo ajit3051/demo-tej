@@ -2097,7 +2097,7 @@ while ($z = $szRes->fetch_assoc()) {
             <div class="panel-heading sidebar-toggle" data-toggle="offcanvas">
                <div class="btn-group" id="buttonexport">
                   <a href="#">
-                     <h5>Recently Sales/Bills</h5>
+                     <h5>Recently Sales/Bills <span class="badge" id="recent_date_badge" style="background:#37475a; color:#fff; font-size:11px; font-weight:600; margin-left:8px; padding: 4px 8px; vertical-align: middle;">Day: <?= date('d-m-Y') ?></span></h5>
                   </a>
                </div>
             </div>
@@ -2124,12 +2124,16 @@ while ($z = $szRes->fetch_assoc()) {
                   </div>
                   <div class="col-sm-6 col-xs-12">
                      <!-- Search Form Box matching purchase-master-creation.php -->
-                     <form name="searchForm" id="searchForm" method="post" class="search-form-wrap pull-right" action="" autocomplete="off" style="width: 100%; max-width: 360px;">
+                     <form name="searchForm" id="searchForm" method="post" class="search-form-wrap pull-right" action="" autocomplete="off" style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; width: 100%; max-width: 480px; flex-wrap: wrap;">
                         <input type="hidden" name="export" value="" />
                         <input type="hidden" name="page" value="1" />
                         <input type="hidden" name="sortOrder" value="DESC" />
                         <input type="hidden" name="sortField" value="id" />
-                        <div class="input-group search-box-group">
+                        <div class="input-group search-date-group" style="width: 165px; margin: 0;">
+                           <span class="input-group-addon" style="background:#f4f4f4; padding: 4px 8px; font-size: 12px; color: #555;" title="Filter by Date"><i class="fa fa-calendar"></i></span>
+                           <input type="date" class="form-control search-input" name="filter_date" id="filter_date" value="<?= date('Y-m-d') ?>" onchange="doSaleSearch()" title="Select Day for Recent Sales" style="height: 34px; font-size: 13px;">
+                        </div>
+                        <div class="input-group search-box-group" style="flex: 1; min-width: 180px; max-width: 250px; margin: 0;">
                            <input type="text" class="form-control search-input search-input-field" name="search" id="company_name" placeholder="Search Recent Sales..." autocomplete="off">
                            <span class="input-group-addon search-addon-btn" id="saleSearchBtn" onclick="doSaleSearch()" style="cursor: pointer;" title="Click to search">
                               <i class="fa fa-search search-icon-sm"></i>

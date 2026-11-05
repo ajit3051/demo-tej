@@ -46,7 +46,7 @@ $query = "SELECT
     COALESCE(SUM(b.bill_credit), 0) AS total_credit,
     COALESCE(SUM(b.total_gst), 0) as gst_amount, 
     COALESCE(SUM(b.total_amt), 0) as amount,
-    COALESCE(SUM(b.total_pp), 0) as purchase_price
+    COALESCE(SUM(b.total_rate), 0) as total_rate
 FROM (
     SELECT 
         bill_number,
@@ -60,7 +60,7 @@ FROM (
         SUM(qty) as total_qty,
         SUM(CAST(gst_amount AS DECIMAL(10,2))) as total_gst,
         SUM(CAST(amount AS DECIMAL(10,2))) as total_amt,
-        SUM(CAST(purchase_price AS DECIMAL(10,2))) as total_pp,
+        SUM(CAST(COALESCE(NULLIF(taxable_amount, ''), NULLIF(net_price, ''), rate * qty, 0) AS DECIMAL(10,2))) as total_rate,
         MAX(CAST(NULLIF(pay_cash, '') AS DECIMAL(10,2))) as bill_cash,
         MAX(CAST(NULLIF(pay_upi, '') AS DECIMAL(10,2))) as bill_upi,
         MAX(CAST(NULLIF(pay_card, '') AS DECIMAL(10,2))) as bill_card,
@@ -108,7 +108,7 @@ $total_amt = 0.00;
 if ($stmt) {
    while($t_row = $stmt->fetch_assoc()){
      $total_qty += (float)($t_row['total_qty'] ?? 0);
-     $total_rate += (float)($t_row['purchase_price'] ?? 0);
+     $total_rate += (float)($t_row['total_rate'] ?? 0);
      $total_gst += (float)($t_row['gst_amount'] ?? 0);
      $total_amt += (float)($t_row['amount'] ?? 0);
    }

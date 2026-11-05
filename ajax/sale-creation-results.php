@@ -13,6 +13,12 @@ $sortOrder 	= !empty($_POST['sortOrder']) ? $_POST['sortOrder'] : 'DESC';
 $sortField 	= !empty($_POST['sortField']) ? $_POST['sortField'] : 'id';
 $exportType = $_REQUEST['export'] ?? '';
 $searchKey  = $_REQUEST['search'] ?? '';
+$filterDate = isset($_REQUEST['filter_date']) ? trim($_REQUEST['filter_date']) : '';
+
+// Default to today if no date filter is specified
+if ($filterDate === '') {
+   $filterDate = $today;
+}
 
 $params = '';
 $fields = array();
@@ -39,6 +45,16 @@ if ($exportType) {
 }
 
 $query = "SELECT $columns FROM tbl_bill WHERE id > 0";
+
+if ($filterDate !== 'all') {
+   $parsedDate = date('Y-m-d', strtotime($filterDate));
+   if (!empty($parsedDate) && $parsedDate !== '1970-01-01') {
+      $query .= " AND DATE(purchage_date) = ?";
+      $params .= 's';
+      $fields[] = $parsedDate;
+      $filterDate = $parsedDate;
+   }
+}
 
 if ($searchKey) {
    $query .= " AND (bill_number LIKE CONCAT('%', ?, '%') OR account_name LIKE CONCAT('%', ?, '%') OR pay_mode LIKE CONCAT('%', ?, '%') OR gst_type LIKE CONCAT('%', ?, '%'))";
@@ -133,6 +149,7 @@ if ($totalRecordsWithLimit > 0) {
       <td colspan="12"> No Recently added</td>
    </tr>';
  }  
+ $data['filter_date'] = $filterDate;
  $data['htmlData'] = $html;
 echo json_encode($data);
 die;

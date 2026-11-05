@@ -100,10 +100,10 @@ function getAjaxResults(formId) {
                 $("#pagination-result").html(res.pagination);
             }
        
-            $('#'+formId).find('.total-qty').text(res.total_qty);
-            $('#'+formId).find('.total-gst').text(res.total_gst);
-            $('#'+formId).find('.total-rate').text(res.total_rate);
-            $('#'+formId).find('.total-amt').text(res.total_amt);
+            $('#'+formId).find('.total-qty, .t_qty').text(res.total_qty);
+            $('#'+formId).find('.total-gst, .t_gst').text(res.total_gst);
+            $('#'+formId).find('.total-rate, .t_rate').text(res.total_rate);
+            $('#'+formId).find('.total-amt, .t_amt').text(res.total_amt);
             $('#'+formId).closest('section').find('.cash-qty').text(res.cash_qty);
             $('#'+formId).closest('section').find('.cash-amt').text(res.cash_amt);
             $('#'+formId).closest('section').find('.upi-qty').text(res.upi_qty);

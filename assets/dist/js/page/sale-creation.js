@@ -399,6 +399,17 @@ function getAjaxResults() {
             $("#latestRecord").html(res.htmlData);
             $("#pagination-result").html(res.pagination);
 
+            if (res.filter_date) {
+                var dParts = res.filter_date.split('-');
+                if (dParts.length === 3) {
+                    var formattedDate = dParts[2] + '-' + dParts[1] + '-' + dParts[0];
+                    $("#recent_date_badge").text('Day: ' + formattedDate);
+                }
+                if (!$("#filter_date").val()) {
+                    $("#filter_date").val(res.filter_date);
+                }
+            }
+
             $("#overlay").hide();
 
         }
@@ -423,6 +434,11 @@ $(document).on('keydown', '#searchForm input[name="search"], #searchForm #compan
         e.preventDefault();
         doSaleSearch();
     }
+});
+
+// Change date filter
+$(document).on('change', '#filter_date, #searchForm input[name="filter_date"]', function() {
+    doSaleSearch();
 });
 
 // Form submit
