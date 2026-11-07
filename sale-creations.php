@@ -2150,7 +2150,7 @@ while ($z = $szRes->fetch_assoc()) {
                         <tr class="info">
                            <th><input type="checkbox" class="all"></th>
                            <th>SrNo</th>
-                           <th>Date</th>
+                           <th>Date & Time</th>
                            <th>Bill No</th>
                            <th>Account Name</th>
                            <th>PayMode</th>

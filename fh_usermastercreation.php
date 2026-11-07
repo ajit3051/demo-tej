@@ -5,12 +5,14 @@
    $update_id = 0;
    $edit_user = [];
 
-   if (isset($_GET['update_id'])) {
-       $update_id = intval($_GET['update_id']);
-       $fetch_user = mysqli_query($conn, "SELECT * FROM tbl_user_master WHERE id = '$update_id'");
-       if ($fetch_user && mysqli_num_rows($fetch_user) > 0) {
-           $edit_user = mysqli_fetch_assoc($fetch_user);
-           $update_mode = true;
+   if (isset($_GET['update_id']) || isset($_POST['update_id'])) {
+       $update_id = isset($_POST['update_id']) ? intval($_POST['update_id']) : intval($_GET['update_id'] ?? 0);
+       if ($update_id > 0) {
+           $fetch_user = mysqli_query($conn, "SELECT * FROM tbl_user_master WHERE id = '$update_id'");
+           if ($fetch_user && mysqli_num_rows($fetch_user) > 0) {
+               $edit_user = mysqli_fetch_assoc($fetch_user);
+               $update_mode = true;
+           }
        }
    }
 
@@ -22,8 +24,8 @@
        $store_name       = mysqli_real_escape_string($conn, $_POST['store_name'] ?? '');
        $location         = mysqli_real_escape_string($conn, $_POST['location'] ?? '');
        $user_type        = mysqli_real_escape_string($conn, $_POST['user_type'] ?? '');
-       $password         = $_POST['password'] ?? '';
-       $confirm_password = $_POST['confirm_password'] ?? '';
+       $password         = trim((string)($_POST['password'] ?? ''));
+       $confirm_password = trim((string)($_POST['confirm_password'] ?? ''));
        $current_datetime = date('Y-m-d H:i:s');
        $gender           = mysqli_real_escape_string($conn, $_POST['gender'] ?? '1');
        $status           = mysqli_real_escape_string($conn, $_POST['status'] ?? 'true');
@@ -68,10 +70,10 @@
                // UPDATE MODE
                $picture = !empty($new_picture) ? $new_picture : ($edit_user['picture'] ?? '');
 
+               $password_set_sql = "";
                if (!empty($password)) {
                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-               } else {
-                   $hashed_password = $edit_user['password'] ?? '';
+                   $password_set_sql = "password='$hashed_password', ";
                }
 
                $dup = mysqli_query($conn, "SELECT id FROM tbl_user_master WHERE user_name='$user_name' AND id != '$update_id'");
@@ -88,7 +90,7 @@
                        store_name='$store_name',
                        location='$location',
                        user_type='$user_type',
-                       password='$hashed_password',
+                       {$password_set_sql}
                        updated_date='$current_datetime',
                        picture='$picture',
                        gender='$gender',
@@ -105,7 +107,7 @@
                                'User Master Updated Successfully 🎉'
                            );
                            setTimeout(function(){
-                               window.location.href = 'fh_usermastercreation.php';
+                               window.location.href = 'fh_usermastercreation.php?update_id=" . $update_id . "';
                            }, 1500);
                        });
                        </script>
@@ -215,7 +217,7 @@
                               <a href="fh_usermastercreation.php"> <button class="button-btn-btn btn-exp btn-sm ml-5"><i class="fa fa-plus mr-5"></i>Add New User</button></a>
                               <?php } ?>
                            </div>
-                           <form method="post" enctype="multipart/form-data">
+                           <form method="post" enctype="multipart/form-data" id="userMasterForm" onsubmit="return validateUserMasterForm();">
                               <?php echo $msg; ?>
                               <div class="row">
                                  <div class="col-sm-4">
@@ -276,9 +278,9 @@
                                        <select name="user_type" class="form-control" required>
                                           <option value="null">Select User Type</option>
                                           <?php
-                                             $user_types = ['Super Admin', 'Admin', 'Manager', 'Power User', 'User'];
+                                             $user_types = ['Super Admin', 'Admin', 'Manager', 'Power User', 'User', 'api'];
                                              foreach ($user_types as $utype) {
-                                                $selected = ($update_mode && ($edit_user['user_type'] ?? '') == $utype) ? 'selected' : '';
+                                                $selected = ($update_mode && strcasecmp($edit_user['user_type'] ?? '', $utype) === 0) ? 'selected' : '';
                                                 echo "<option value='{$utype}' {$selected}>{$utype}</option>";
                                              }
                                           ?>
@@ -292,13 +294,19 @@
                                  <div class="col-sm-4">
                                     <div class="form-group">
                                        <label>Password</label><?php if (!$update_mode) { ?><label class="text-required">*</label><?php } ?>
-                                       <input type="text" class="form-control" name="password" id="password" placeholder="Enter New Password (Optional)" <?php echo $update_mode ? '' : 'required'; ?> value="">
+                                       <div class="input-group">
+                                          <input type="password" class="form-control" name="password" id="password" placeholder="<?php echo $update_mode ? 'Leave blank to keep existing password' : 'Enter Password'; ?>" <?php echo $update_mode ? '' : 'required'; ?> autocomplete="new-password">
+                                          <span class="input-group-addon" style="cursor:pointer;" onclick="togglePassVisibility('password')"><i class="fa fa-eye" id="eye_password"></i></span>
+                                       </div>
                                     </div>
                                  </div>
                                  <div class="col-sm-4">
                                     <div class="form-group">
                                        <label>Confirm Password</label><?php if (!$update_mode) { ?><label class="text-required">*</label><?php } ?>
-                                       <input type="text" class="form-control" name="confirm_password" id="confirm_password" placeholder="Confirm New Password" <?php echo $update_mode ? '' : 'required'; ?> value="">
+                                       <div class="input-group">
+                                          <input type="password" class="form-control" name="confirm_password" id="confirm_password" placeholder="<?php echo $update_mode ? 'Confirm new password' : 'Confirm Password'; ?>" <?php echo $update_mode ? '' : 'required'; ?> autocomplete="new-password">
+                                          <span class="input-group-addon" style="cursor:pointer;" onclick="togglePassVisibility('confirm_password')"><i class="fa fa-eye" id="eye_confirm_password"></i></span>
+                                       </div>
                                     </div>
                                  </div>
                               </div>
@@ -593,6 +601,39 @@
       <!-- jQuery -->
       <?php include('include/js.php');?>
       <script src="assets/dist/js/page/usermaster-list.js"></script>
+      <script>
+      function togglePassVisibility(inputId) {
+          var input = document.getElementById(inputId);
+          var icon = document.getElementById('eye_' + inputId);
+          if (input.type === 'password') {
+              input.type = 'text';
+              if (icon) icon.className = 'fa fa-eye-slash';
+          } else {
+              input.type = 'password';
+              if (icon) icon.className = 'fa fa-eye';
+          }
+      }
+
+      function validateUserMasterForm() {
+          var pass = document.getElementById('password').value.trim();
+          var cpass = document.getElementById('confirm_password').value.trim();
+          var isUpdate = <?php echo $update_mode ? 'true' : 'false'; ?>;
+
+          if (!isUpdate && pass === '') {
+              alert('Password is required when creating a new user.');
+              document.getElementById('password').focus();
+              return false;
+          }
+
+          if (pass !== '' && pass !== cpass) {
+              alert('Password and Confirm Password do not match!');
+              document.getElementById('confirm_password').focus();
+              return false;
+          }
+
+          return true;
+      }
+      </script>
       <!-- End Theme label Script
          =====================================================================-->
    </body>

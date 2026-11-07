@@ -5,8 +5,9 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.php -f
 RewriteRule ^([^\.]+)$ $1.php [QSA,L]
 
-# Redirect .php to clean URL (exclude POST requests and AJAX requests to preserve request data)
+# Redirect .php to clean URL (exclude POST requests and AJAX/API requests to preserve request data)
 RewriteCond %{REQUEST_METHOD} !POST
 RewriteCond %{THE_REQUEST} !/ajax/ [NC]
+RewriteCond %{THE_REQUEST} !/api/ [NC]
 RewriteCond %{THE_REQUEST} \s([^.]+)\.php [NC]
 RewriteRule ^ %1 [R=301,L]

@@ -135,6 +135,29 @@ if ($totalRecordsWithLimit > 0) {
    for ($i = 1; $i <= $totalRecordsWithLimit; $i++) {
       $row = $stmt->fetch_assoc();
 
+      $isDual = (strcasecmp($row['pay_mode'] ?? '', 'DUAL') === 0 || stripos($row['paymode_name'] ?? '', 'DUAL') !== false);
+      $paymodeName = !empty($row['paymode_name']) ? $row['paymode_name'] : ($row['pay_mode'] ?? '');
+
+      if ($isDual) {
+         $dualPayments = array();
+         if (!empty($row['pay_cash']) && (float)$row['pay_cash'] > 0) {
+            $dualPayments[] = 'Cash: ₹' . number_format((float)$row['pay_cash'], 2);
+         }
+         if (!empty($row['pay_upi']) && (float)$row['pay_upi'] > 0) {
+            $dualPayments[] = 'UPI: ₹' . number_format((float)$row['pay_upi'], 2);
+         }
+         if (!empty($row['pay_card']) && (float)$row['pay_card'] > 0) {
+            $dualPayments[] = 'Card: ₹' . number_format((float)$row['pay_card'], 2);
+         }
+         if (!empty($row['pay_credit']) && (float)$row['pay_credit'] > 0) {
+            $dualPayments[] = 'Credit: ₹' . number_format((float)$row['pay_credit'], 2);
+         }
+         $tooltipText = !empty($dualPayments) ? implode(' | ', $dualPayments) : 'Dual Payment';
+         $paymodeCol = '<span class="label label-info" data-toggle="tooltip" data-placement="top" title="' . htmlspecialchars($tooltipText) . '" style="cursor:pointer; font-size:11px; padding:3px 6px; display:inline-block;">' . htmlspecialchars($paymodeName) . ' <i class="fa fa-info-circle" style="margin-left:2px;"></i></span>';
+      } else {
+         $paymodeCol = htmlspecialchars($paymodeName);
+      }
+
       $html .= '<tr>
          <td>' . $i . '</td>
          <td>' . dateformat($row['purchage_date'] ?? '') . '</td>
@@ -150,7 +173,7 @@ if ($totalRecordsWithLimit > 0) {
          <td>' . ($row['amount'] ?? 0) . '</td>
          <td>' . ($row['account_name'] ?? '') . '</td>
          <td>' . ($row['mobile_number'] ?? '') . '</td>
-         <td>' . ($row['paymode_name'] ?? '') . '</td>
+         <td>' . $paymodeCol . '</td>
           <td>
             <a class="btn btn-info btn-xs" onclick="view_details(' . ($row['id'] ?? 0) . ')" href="javascript:void(0);" data-toggle="tooltip" title="View & Print Invoice"><i class="fa fa-eye"></i></a>
             <a class="" onClick="return confirm(\'Are you sure you want to Update Bill?\')" href="sale-creations.php?bill_no=' . urlencode($row['bill_number'] ?? '') . '"><button data-toggle="tooltip" title="Update Bill" type="button" class="btn-add btn-xs"><i class="fa fa-pencil"></i><span style=""></span></button></a>

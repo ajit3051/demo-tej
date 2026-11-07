@@ -97,6 +97,8 @@ function getAjaxResults(formId) {
                 $("#pagination-result").html(res.pagination);
             }
 
+            $('[data-toggle="tooltip"]').tooltip();
+
             $('#'+formId).find('.total-qty').text(res.total_qty);
             $('#'+formId).find('.t_qty').text(res.t_qty);
             $('#'+formId).find('.t_bal_qty').text(res.t_bal_qty);

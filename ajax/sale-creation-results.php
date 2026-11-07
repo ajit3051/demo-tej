@@ -25,6 +25,7 @@ $fields = array();
 
 if ($exportType) {
    $columns = "MAX(purchage_date) as purchage_date, 
+               MAX(created_date) as created_date,
                bill_number, 
                MAX(account_name) as account_name, 
                MAX(pay_mode) as pay_mode,
@@ -35,6 +36,7 @@ if ($exportType) {
 } else {
    $columns = "MAX(id) as id, 
                MAX(purchage_date) as purchage_date, 
+               MAX(created_date) as created_date,
                bill_number, 
                MAX(account_name) as account_name, 
                MAX(pay_mode) as pay_mode,
@@ -110,7 +112,7 @@ if ($totalRecordsWithLimit > 0) {
             </div>
          </td>
          <td> <label class="s_no" for="checkbox'. $i .'">'. $i .'</label></td>
-         <td>'. dateformat($row['purchage_date']) .'</td>
+         <td>'. (!empty($row['created_date']) && $row['created_date'] != '0000-00-00 00:00:00' ? dateformat($row['created_date'], 1) : dateformat($row['purchage_date'])) .'</td>
          <td>'. $row['bill_number'] .'</td>
          <td>'. $row['account_name'] .'</td>
          <td>'. $row['pay_mode'] .'</td>

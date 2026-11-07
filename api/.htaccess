@@ -1,0 +1,16 @@
+Options -Indexes
+RewriteEngine On
+RewriteBase /demo-tej/api/
+
+# Pass Authorization header to PHP
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Allow direct access to existing files and directories
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Route clean URLs to index.php
+RewriteRule ^(.*)$ index.php [QSA,L]
+
