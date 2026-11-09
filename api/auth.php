@@ -30,10 +30,11 @@ switch ($action) {
 
         // Query user from tbl_user_master with user_type = 'api' condition
         $user = ApiDB::fetchOne(
-            "SELECT id, user_code, user_name, mobile_no, store_name, location, user_type, password, status 
-             FROM tbl_user_master 
-             WHERE (user_name = :username OR user_code = :usercode) 
-               AND LOWER(user_type) = 'api' 
+            "SELECT u.id, u.user_code, u.user_name, u.mobile_no, u.store_code, s.store_name, u.location, u.user_type, u.password, u.status 
+             FROM tbl_user_master u 
+             LEFT JOIN tbl_store_master s ON u.store_code = s.store_code 
+             WHERE (u.user_name = :username OR u.user_code = :usercode) 
+               AND LOWER(u.user_type) = 'api' 
              LIMIT 1",
             [':username' => $username, ':usercode' => $username]
         );
@@ -71,6 +72,7 @@ switch ($action) {
         $_SESSION['login_user'] = $user['user_name'];
         $_SESSION['user_code']  = $user['user_code'];
         $_SESSION['user_type']  = $user['user_type'];
+        $_SESSION['store_code'] = $user['store_code'] ?? '';
         $_SESSION['store_name'] = $user['store_name'];
         $_SESSION['IS_LOGIN']   = 'yes';
 
@@ -93,9 +95,10 @@ switch ($action) {
         $user = Auth::requireAuth();
         // Fetch full profile from database
         $profile = ApiDB::fetchOne(
-            "SELECT id, user_code, user_name, mobile_no, store_name, location, user_type, gender, status, created_date 
-             FROM tbl_user_master 
-             WHERE user_code = :code OR user_name = :name LIMIT 1",
+            "SELECT u.id, u.user_code, u.user_name, u.mobile_no, u.store_code, s.store_name, u.location, u.user_type, u.gender, u.status, u.created_date 
+             FROM tbl_user_master u 
+             LEFT JOIN tbl_store_master s ON u.store_code = s.store_code 
+             WHERE u.user_code = :code OR u.user_name = :name LIMIT 1",
             [':code' => $user['user_code'] ?? '', ':name' => $user['user_name'] ?? '']
         );
         Response::success($profile ?: $user, "User profile retrieved.");

@@ -26,7 +26,16 @@ if(isset($_POST['Login']))
         $_SESSION['login_user'] = $user_row['user_name'];
         $_SESSION['user_code']  = $user_row['user_code'];
         $_SESSION['user_type']  = $user_row['user_type'];
-        $_SESSION['store_name'] = $user_row['store_name'];
+        $_SESSION['store_code'] = $user_row['store_code'] ?? '';
+
+        $resolved_store_name = '';
+        if (!empty($_SESSION['store_code'])) {
+            $st_res = mysqli_query($conn, "SELECT store_name FROM tbl_store_master WHERE store_code = '" . mysqli_real_escape_string($conn, $_SESSION['store_code']) . "' LIMIT 1");
+            if ($st_res && $st_row = mysqli_fetch_assoc($st_res)) {
+                $resolved_store_name = $st_row['store_name'];
+            }
+        }
+        $_SESSION['store_name'] = $resolved_store_name;
         $_SESSION['IS_LOGIN']   = 'yes';
         header('location: fh_dashboard.php');
         exit();

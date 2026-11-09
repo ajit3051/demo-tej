@@ -21,6 +21,11 @@
    <!-- Site wrapper -->
    <div class="wrapper">
       <?php include('include/header-top-bar.php'); ?>
+      <?php 
+      if (function_exists('enforce_store_page_access')) {
+          enforce_store_page_access();
+      }
+      ?>
       <?php include('include/showMessages.php'); ?>
       <!-- =============================================== -->
       <!-- Left side column. contains the sidebar -->

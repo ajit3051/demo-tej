@@ -61,6 +61,19 @@ error_reporting(E_ALL);
    $store_name              = $_POST['sidebar_store_name'] ?? '';
    $location                = $_POST['sidebar_location'] ?? '';
 
+   if (empty($store_name) && !empty($_SESSION['active_store']) && $_SESSION['active_store'] !== 'ALL') {
+       $store_name = $_SESSION['active_store'];
+   }
+   if (empty($location) && !empty($store_name)) {
+       $locQuery = $db->select("SELECT location_name, store_code FROM tbl_store_master WHERE store_name = ? LIMIT 1", 's', array($store_name));
+       if ($locQuery && $locRow = $locQuery->fetch_assoc()) {
+           $location = $locRow['location_name'] ?? '';
+           if (empty($s_code)) {
+               $s_code = $locRow['store_code'] ?? '';
+           }
+       }
+   }
+
    // Popup payment data
    $popup_ac_code           = $_POST['popup_ac_code'] ?? '';
    $popup_account_name      = $_POST['popup_account_name'] ?? '';
@@ -1132,7 +1145,7 @@ while ($z = $szRes->fetch_assoc()) {
                      <div class="col-md-5">
                         <div class="modern-form-group">
                            <label>Store name</label>
-                           <input type="text" class="modern-input" name="store_name" id="store_name" placeholder="Enter Store name" value="<?= $store_name ?? '' ?>">
+                           <input type="text" class="modern-input" name="store_name" id="store_name" placeholder="Enter Store name" value="<?= htmlspecialchars(!empty($store_name) ? $store_name : (($_SESSION['active_store'] ?? '') !== 'ALL' ? ($_SESSION['active_store'] ?? '') : '')) ?>">
                         </div>
                      </div>
                      <div class="col-md-5">

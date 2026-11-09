@@ -1,6 +1,7 @@
 <?php
 $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? '');
 $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
+require_once(__DIR__ . '/store_permissions.php');
 ?>
 
 <style>
@@ -377,6 +378,7 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             <span class="pull-right-container"></span>
          </a>
       </li>
+      <?php if (has_any_page_access(['fh_usermastercreation.php', 'fh_usermastercreation_list.php', 'fh_store_permission.php', 'fh_storemastercreation.php', 'fh_storemastercreation_list.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-users"></i><span>ERP Master Management</span>
@@ -385,6 +387,7 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             </span>
          </a>
          <ul class="treeview-menu">
+            <?php if (has_any_page_access(['fh_usermastercreation.php', 'fh_usermastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#">
                   <i class="fa fa-user-circle"></i><span>User Master</span>
@@ -393,13 +396,23 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   </span>
                </a>
                <ul class="treeview-menu">
+                  <?php if (has_store_page_access('fh_usermastercreation.php')): ?>
                   <li><a href="fh_usermastercreation.php">User Master Creation</a></li>
+                  <?php endif; ?>
+                  <?php if (has_store_page_access('fh_usermastercreation_list.php')): ?>
                   <li><a href="fh_usermastercreation_list.php">User Master List</a></li>
+                  <?php endif; ?>
                </ul>
             </li>
+            <?php endif; ?>
+
+            <?php if (has_store_page_access('fh_store_permission.php')): ?>
             <li>
-               <a href="#"><i class="fa fa-key"></i><span>User Permission</span></a>
+               <a href="fh_store_permission.php"><i class="fa fa-key"></i><span>Store Permissions</span></a>
             </li>
+            <?php endif; ?>
+
+            <?php if (has_any_page_access(['fh_storemastercreation.php', 'fh_storemastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#">
                   <i class="fa fa-building"></i><span>Store Master</span>
@@ -408,14 +421,21 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   </span>
                </a>
                <ul class="treeview-menu">
+                  <?php if (has_store_page_access('fh_storemastercreation.php')): ?>
                   <li><a href="fh_storemastercreation.php">Store Master Creation</a></li>
+                  <?php endif; ?>
+                  <?php if (has_store_page_access('fh_storemastercreation_list.php')): ?>
                   <li><a href="fh_storemastercreation_list.php">Store Master List</a></li>
+                  <?php endif; ?>
                </ul>
             </li>
+            <?php endif; ?>
 
          </ul>
       </li>
+      <?php endif; ?>
 
+      <?php if (has_any_page_access(['fh_groupmastercreation.php', 'fh_groupmastercreation_list.php', 'fh_subgroupmastercreation.php', 'fh_subgroupmastercreation_list.php', 'fh_brandmastercreation.php', 'fh_brandmastercreation_list.php', 'fh_colormastercreation.php', 'fh_colormastercreation_list.php', 'fh_sizemastercreation.php', 'fh_sizemastercreation_list.php', 'fh_styledesignmastercreation.php', 'fh_styledesignmastercreation_list.php', 'fh_itemmastercreation.php', 'fh_itemmastercreation_list.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-cube"></i><span>Item Master Management</span>
@@ -424,6 +444,7 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             </span>
          </a>
          <ul class="treeview-menu">
+            <?php if (has_any_page_access(['fh_groupmastercreation.php', 'fh_groupmastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#"><span>Category|Group Master</span>
                   <span class="pull-right-container">
@@ -435,7 +456,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_groupmastercreation_list.php">Category|Group List</a></li>
                </ul>
             </li>
+            <?php endif; ?>
 
+            <?php if (has_any_page_access(['fh_subgroupmastercreation.php', 'fh_subgroupmastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#"><span>SubCategory|SubGroup Master</span>
                   <span class="pull-right-container">
@@ -447,6 +470,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_subgroupmastercreation_list.php">SubCategory|SubGroup List</a></li>
                </ul>
             </li>
+            <?php endif; ?>
+
+            <?php if (has_any_page_access(['fh_brandmastercreation.php', 'fh_brandmastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#"><span>Brand Master</span>
                   <span class="pull-right-container">
@@ -458,6 +484,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_brandmastercreation_list.php">Brand Master List</a></li>
                </ul>
             </li>
+            <?php endif; ?>
+
+            <?php if (has_any_page_access(['fh_colormastercreation.php', 'fh_colormastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#"><span>Color Master</span>
                   <span class="pull-right-container">
@@ -469,6 +498,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_colormastercreation_list.php">Color Master List</a></li>
                </ul>
             </li>
+            <?php endif; ?>
+
+            <?php if (has_any_page_access(['fh_sizemastercreation.php', 'fh_sizemastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#"><span>Size Master</span>
                   <span class="pull-right-container">
@@ -480,6 +512,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_sizemastercreation_list.php">Size Master List</a></li>
                </ul>
             </li>
+            <?php endif; ?>
+
+            <?php if (has_any_page_access(['fh_styledesignmastercreation.php', 'fh_styledesignmastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#"><span>Style|Design Master</span>
                   <span class="pull-right-container">
@@ -491,7 +526,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_styledesignmastercreation_list.php">Style|Design List</a></li>
                </ul>
             </li>
+            <?php endif; ?>
 
+            <?php if (has_any_page_access(['fh_itemmastercreation.php', 'fh_itemmastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#"><span>Item Master</span>
                   <span class="pull-right-container">
@@ -503,9 +540,12 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_itemmastercreation_list.php">Item Master List</a></li>
                </ul>
             </li>
+            <?php endif; ?>
          </ul>
       </li>
+      <?php endif; ?>
 
+      <?php if (has_any_page_access(['fh_gstmastercreation.php', 'fh_gstmastercreation_list.php', 'fh_storeprofilecreation.php', 'fh_storeprofilecreation_list.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-percent"></i><span>GST Master Management</span>
@@ -514,6 +554,7 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             </span>
          </a>
          <ul class="treeview-menu">
+            <?php if (has_any_page_access(['fh_gstmastercreation.php', 'fh_gstmastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#"><span>GST Master</span>
                   <span class="pull-right-container">
@@ -525,6 +566,8 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_gstmastercreation_list.php">GST List</a></li>
                </ul>
             </li>
+            <?php endif; ?>
+            <?php if (has_any_page_access(['fh_storeprofilecreation.php', 'fh_storeprofilecreation_list.php'])): ?>
             <li class="treeview">
                <a href="#"><span>GST Reports</span>
                   <span class="pull-right-container">
@@ -536,9 +579,12 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_storeprofilecreation_list.php">GST Report 2</a></li>
                </ul>
             </li>
+            <?php endif; ?>
          </ul>
       </li>
+      <?php endif; ?>
 
+      <?php if (has_any_page_access(['fh_paymodemastercreation.php', 'fh_paymodemastercreation_list.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-credit-card"></i><span>Payment Mode Management</span>
@@ -551,7 +597,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             <li><a href="fh_paymodemastercreation_list.php">Payment Mode List</a></li>
          </ul>
       </li>
+      <?php endif; ?>
 
+      <?php if (has_any_page_access(['ssenterprises_usermastercreation.php', 'ssenterprises_usermastercreation_list.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-tags"></i><span>Rate Master Management</span>
@@ -564,7 +612,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             <li><a href="ssenterprises_usermastercreation_list.php">Rate Master List</a></li>
          </ul>
       </li>
+      <?php endif; ?>
 
+      <?php if (has_any_page_access(['fh_festivalmastercreation.php', 'fh_festivalmastercreation_list.php', 'fh_pointmastercreation.php', 'fh_pointmastercreation_list.php', 'fh_couponmastercreation.php', 'fh_couponmastercreation_list.php', 'fh_couponmastercreation_view.php', 'fh_discountmastercreation.php', 'fh_discountmastercreation_list.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-gift"></i><span>Discount Master Management</span>
@@ -573,6 +623,7 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             </span>
          </a>
          <ul class="treeview-menu">
+            <?php if (has_any_page_access(['fh_festivalmastercreation.php', 'fh_festivalmastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#"><span>Festival Master</span>
                   <span class="pull-right-container">
@@ -584,6 +635,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_festivalmastercreation_list.php">Festival Master List</a></li>
                </ul>
             </li>
+            <?php endif; ?>
+
+            <?php if (has_any_page_access(['fh_pointmastercreation.php', 'fh_pointmastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#"><span>Point Master</span>
                   <span class="pull-right-container">
@@ -595,6 +649,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_pointmastercreation_list.php">Point Master List</a></li>
                </ul>
             </li>
+            <?php endif; ?>
+
+            <?php if (has_any_page_access(['fh_couponmastercreation.php', 'fh_couponmastercreation_list.php', 'fh_couponmastercreation_view.php'])): ?>
             <li class="treeview">
                <a href="#"><span>Coupon Master</span>
                   <span class="pull-right-container">
@@ -607,6 +664,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_couponmastercreation_view.php">Coupon Master View</a></li>
                </ul>
             </li>
+            <?php endif; ?>
+
+            <?php if (has_any_page_access(['fh_discountmastercreation.php', 'fh_discountmastercreation_list.php'])): ?>
             <li class="treeview">
                <a href="#"><span>Discount Master</span>
                   <span class="pull-right-container">
@@ -618,9 +678,12 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   <li><a href="fh_discountmastercreation_list.php">Discount Master List</a></li>
                </ul>
             </li>
+            <?php endif; ?>
          </ul>
       </li>
+      <?php endif; ?>
 
+      <?php if (has_any_page_access(['purchase-master-creation.php', 'purchase-master-billwise-list.php', 'purchase-master-itemwise-list.php', 'purchase-master-report.php', 'fh_festivalmastercreation.php', 'fh_couponmastercreation.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-cubes"></i><span>Inventory|Purchase Management</span>
@@ -667,7 +730,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             </li>
          </ul>
       </li>
+      <?php endif; ?>
 
+      <?php if (has_any_page_access(['tejaserp-inventorybarcodeprint.php', 'tejaserp-inventorybarcodeprint-list.php', 'tejaserp-inventorybarcodeprint-report.php', 'tejaserp-inventorybarcodeprint-re-print.php', 'fh_couponmastercreation.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-barcode"></i><span>Barcode Master Management</span>
@@ -711,7 +776,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             </li>
          </ul>
       </li>
+      <?php endif; ?>
 
+      <?php if (has_any_page_access(['stock-transfer.php', 'store-items-list.php', 'returned-store-items-list.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-exchange"></i><span>Stock Transfer Management</span>
@@ -743,7 +810,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             </li>
          </ul>
       </li>
+      <?php endif; ?>
 
+      <?php if (has_any_page_access(['sale-creations.php', 'tejaserp-sale-billwise-list.php', 'tejaserp-sale-itemwise-list.php', 'tejaserp-sale-dsr-1.php', 'tejaserp-sale-dsr-2.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-file-text-o"></i><span>Bill || Sale Management</span>
@@ -759,16 +828,28 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
                   </span>
                </a>
                <ul class="treeview-menu">
+                  <?php if (has_store_page_access('sale-creations.php')): ?>
                   <li><a href="sale-creations.php">Bill || Sale Creation</a></li>
+                  <?php endif; ?>
+                  <?php if (has_store_page_access('tejaserp-sale-billwise-list.php')): ?>
                   <li><a href="tejaserp-sale-billwise-list.php">Sale BillWise List</a></li>
+                  <?php endif; ?>
+                  <?php if (has_store_page_access('tejaserp-sale-itemwise-list.php')): ?>
                   <li><a href="tejaserp-sale-itemwise-list.php">Sale ItemWise List</a></li>
+                  <?php endif; ?>
+                  <?php if (has_store_page_access('tejaserp-sale-dsr-1.php')): ?>
                   <li><a href="tejaserp-sale-dsr-1.php">DSR-1</a></li>
+                  <?php endif; ?>
+                  <?php if (has_store_page_access('tejaserp-sale-dsr-2.php')): ?>
                   <li><a href="tejaserp-sale-dsr-2.php">DSR-2</a></li>
+                  <?php endif; ?>
                </ul>
             </li>
          </ul>
       </li>
+      <?php endif; ?>
 
+      <?php if (has_any_page_access(['fh_expenses_headmastercreation.php', 'fh_expensesheadmastercreation_list.php', 'fh_customertypemastercreation.php', 'fh_customertypemastercreation_list.php', 'fh_partytypemastercreation.php', 'fh_partytypemastercreation_list.php', 'fh_accountmastercreation.php', 'fh_accountmastercreation_list.php', 'fh_expensesmastercreation.php', 'fh_expensesmastercreation_list.php', 'fh_expensesmasterbalancesheet.php', 'fh_paymentmastercreation.php', 'fh_paymentmastercreation_list.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-book"></i><span>Accounts Master Management</span>
@@ -849,7 +930,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             </li>
          </ul>
       </li>
+      <?php endif; ?>
 
+      <?php if (has_any_page_access(['fh_SalesManmastercreation.php', 'fh_SalesManmastercreation_list.php', 'fh_Salesman_target_mastercreation.php', 'fh_Salesman_target_mastercreation_list.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-address-book"></i><span>CRM Management</span>
@@ -882,7 +965,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             </li>
          </ul>
       </li>
+      <?php endif; ?>
 
+      <?php if (has_any_page_access(['tejaserp-stockreport-inshortcut.php', 'tejaserp-stockreport-indetails.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-bar-chart"></i><span>Reports Management</span>
@@ -904,51 +989,9 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             </li>
          </ul>
       </li>
+      <?php endif; ?>
 
-      <li class="treeview">
-         <a href="#">
-            <i class="fa fa-calendar-check-o"></i><span>Attendance Management</span>
-            <span class="pull-right-container">
-               <i class="fa fa-angle-left pull-right"></i>
-            </span>
-         </a>
-         <ul class="treeview-menu">
-            <li class="treeview">
-               <a href="#"><span>Customer Type Master</span>
-                  <span class="pull-right-container">
-                     <i class="fa fa-angle-left pull-right"></i>
-                  </span>
-               </a>
-               <ul class="treeview-menu">
-                  <li><a href="fh_festivalmastercreation.php">Customer Type Master Creation</a></li>
-                  <li><a href="fh_festivalmastercreation_list.php">Customer Type Master List</a></li>
-               </ul>
-            </li>
-         </ul>
-      </li>
-
-      <li class="treeview">
-         <a href="#">
-            <i class="fa fa-money"></i><span>PayRoll Management</span>
-            <span class="pull-right-container">
-               <i class="fa fa-angle-left pull-right"></i>
-            </span>
-         </a>
-         <ul class="treeview-menu">
-            <li class="treeview">
-               <a href="#"><span>Customer Type Master</span>
-                  <span class="pull-right-container">
-                     <i class="fa fa-angle-left pull-right"></i>
-                  </span>
-               </a>
-               <ul class="treeview-menu">
-                  <li><a href="fh_festivalmastercreation.php">Customer Type Master Creation</a></li>
-                  <li><a href="fh_festivalmastercreation_list.php">Customer Type Master List</a></li>
-               </ul>
-            </li>
-         </ul>
-      </li>
-
+      <?php if (has_any_page_access(['fh_web_1strowcreation.php', 'fh_web_1strowcreation_list.php'])): ?>
       <li class="treeview">
          <a href="#">
             <i class="fa fa-globe"></i><span>WebSite Management</span>
@@ -995,6 +1038,7 @@ $cleanCurrentPage = strtolower(preg_replace('/\.php$/i', '', $currentScript));
             </li>
          </ul>
       </li>
+      <?php endif; ?>
 
       <li class="treeview">
          <a href="#">

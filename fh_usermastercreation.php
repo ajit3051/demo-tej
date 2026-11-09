@@ -8,7 +8,7 @@
    if (isset($_GET['update_id']) || isset($_POST['update_id'])) {
        $update_id = isset($_POST['update_id']) ? intval($_POST['update_id']) : intval($_GET['update_id'] ?? 0);
        if ($update_id > 0) {
-           $fetch_user = mysqli_query($conn, "SELECT * FROM tbl_user_master WHERE id = '$update_id'");
+           $fetch_user = mysqli_query($conn, "SELECT u.*, s.store_name FROM tbl_user_master u LEFT JOIN tbl_store_master s ON u.store_code = s.store_code WHERE u.id = '$update_id'");
            if ($fetch_user && mysqli_num_rows($fetch_user) > 0) {
                $edit_user = mysqli_fetch_assoc($fetch_user);
                $update_mode = true;
@@ -21,7 +21,7 @@
        $user_code        = mysqli_real_escape_string($conn, $_POST['user_code'] ?? '');
        $user_name        = mysqli_real_escape_string($conn, $_POST['user_name'] ?? '');
        $mobile_no        = mysqli_real_escape_string($conn, $_POST['mobile_no'] ?? '');
-       $store_name       = mysqli_real_escape_string($conn, $_POST['store_name'] ?? '');
+       $store_code       = mysqli_real_escape_string($conn, trim((string)($_POST['store_code'] ?? '')));
        $location         = mysqli_real_escape_string($conn, $_POST['location'] ?? '');
        $user_type        = mysqli_real_escape_string($conn, $_POST['user_type'] ?? '');
        $password         = trim((string)($_POST['password'] ?? ''));
@@ -87,7 +87,7 @@
                        user_code='$user_code',
                        user_name='$user_name',
                        mobile_no='$mobile_no',
-                       store_name='$store_name',
+                       store_code='$store_code',
                        location='$location',
                        user_type='$user_type',
                        {$password_set_sql}
@@ -132,10 +132,10 @@
                        </div>';
                } else {
                     $query = "INSERT INTO tbl_user_master
-                    (user_code,user_name,mobile_no,store_name,location,user_type,password,
+                    (user_code,user_name,mobile_no,store_code,location,user_type,password,
                      created_date,updated_date,picture,gender,status)
                     VALUES
-                    ('$user_code','$user_name','$mobile_no','$store_name','$location','$user_type',
+                    ('$user_code','$user_name','$mobile_no','$store_code','$location','$user_type',
                      '$hashed_password','$current_datetime','$current_datetime',
                      '$picture','$gender','$status')";
 
@@ -250,14 +250,14 @@
                               <div class="row">
                                  <div class="col-sm-4">
                                     <div class="form-group">
-                                       <label>Store Name</label><label class="text-required">*</label>
-                                       <select name="store_name" class="form-control" required>
-                                          <option value="null">Select Store Name </option>
+                                       <label>Store</label><label class="text-required">*</label>
+                                       <select name="store_code" class="form-control" required>
+                                          <option value="">Select Store</option>
                                           <?php
-                                             $query = mysqli_query($conn, "SELECT * FROM tbl_store_master");
-                                             while ($row = mysqli_fetch_array($query)) {
-                                                $selected = ($update_mode && ($edit_user['store_name'] ?? '') == $row['store_name']) ? 'selected' : '';
-                                                echo "<option value='{$row['store_name']}' {$selected}>{$row['store_name']}</option>";
+                                             $squery = mysqli_query($conn, "SELECT store_code, store_name FROM tbl_store_master ORDER BY store_name ASC");
+                                             while ($srow = mysqli_fetch_array($squery)) {
+                                                $selected = ($update_mode && (($edit_user['store_code'] ?? '') == $srow['store_code'])) ? 'selected' : '';
+                                                echo "<option value='{$srow['store_code']}' {$selected}>{$srow['store_name']} ({$srow['store_code']})</option>";
                                              } 
                                           ?>
                                        </select>
@@ -402,7 +402,7 @@
                                         <th>User Code</th>
                                         <th>User Name</th>
                                         <th>Mobile No</th>
-                                        <th>Store Name</th>
+                                        <th>Store (Code)</th>
                                         <th>Location</th>
                                         <th>User Type</th>
                                         <th>Created Date</th>
@@ -415,7 +415,7 @@
                                          $init_page = 1;
                                          $init_perpage = isset($_SESSION["_RECORDPERPAGE_"]) && $_SESSION["_RECORDPERPAGE_"] ? (int)$_SESSION["_RECORDPERPAGE_"] : 20;
                                          $init_offset = ($init_page - 1) * $init_perpage;
-                                         $query = mysqli_query($conn, "SELECT * FROM tbl_user_master ORDER BY id DESC LIMIT $init_offset, $init_perpage"); 
+                                         $query = mysqli_query($conn, "SELECT u.*, s.store_name FROM tbl_user_master u LEFT JOIN tbl_store_master s ON u.store_code = s.store_code ORDER BY u.id DESC LIMIT $init_offset, $init_perpage"); 
                                          $countQuery = mysqli_query($conn, "SELECT COUNT(*) as total FROM tbl_user_master");
                                          $countRow = mysqli_fetch_assoc($countQuery);
                                          $totalRecords = $countRow['total'] ?? 0;
@@ -460,7 +460,7 @@
                                          <td class="td-middle"><code><?php echo htmlspecialchars($user['user_code'] ?? ''); ?></code></td>
                                          <td class="td-middle-bold"><?php echo htmlspecialchars(substr($user['user_name'] ?? '',0,50)); ?></td>
                                          <td class="td-middle"><?php echo htmlspecialchars(substr($user['mobile_no'] ?? '',0,50)); ?></td>
-                                         <td class="td-middle"><?php echo htmlspecialchars(substr($user['store_name'] ?? '',0,50)); ?></td>
+                                         <td class="td-middle"><code><?php echo htmlspecialchars($user['store_code'] ?? ''); ?></code><?php if (!empty($user['store_name'])) { ?><br><small class="text-muted"><?php echo htmlspecialchars(substr($user['store_name'], 0, 50)); ?></small><?php } ?></td>
                                          <td class="td-middle"><?php echo htmlspecialchars(substr($user['location'] ?? '',0,50)); ?></td>
                                          <td class="td-middle"><span class="label label-info badge-info-sm"><?php echo htmlspecialchars(substr($user['user_type'] ?? '',0,50)); ?></span></td>
                                          <td class="td-middle-muted"><?php echo !empty($user['created_date']) ? date('d-m-Y H:i', strtotime($user['created_date'])) : '-'; ?></td>
@@ -494,39 +494,41 @@
                            <div class="row">
                               <div class="col-md-12">
                                  <form method="post">
-                                         $company_name=$_POST['company_name'];
-                                         $status=$_POST['status'];
-                                         
-                                             $dup=mysqli_query($conn,"select * from tbl_store_master where store_name='$store_name'");
-                                               if(mysqli_num_rows($dup)>0)
-                                               {
-                                                   $msg='<div class="alert alert-danger alert-dismissible fade1 show">
-                                                       <button type="button" class="close" data-dismiss="alert">&times;</button>
-                                                       <strong>Store Master Already exist!</strong>
-                                                       </div>';
-                                               }
-                                               else{
-                                                   $query="Insert into tbl_store_master(store_code,store_name,location_name,company_name,status)values('$store_code','$store_name','$location_name','$company_name','$status')";
-                                                   if(mysqli_query($conn,$query)){
-                                                       $msg='<div class="alert alert-success alert-dismissible fade1 show">
-                                                       <button type="button" class="close" data-dismiss="alert">&times;</button>
-                                                       <strong>Store Master Creations Success..!</strong>
-                                                     </div>';
-                                                   }
-                                                   else{
-                                                       $msg='<div class="alert alert-danger alert-dismissible fade1 show">
-                                                       <button type="button" class="close" data-dismiss="alert">&times;</button>
-                                                       <strong>Store Master Creations Failed!</strong>
-                                                       </div>';
-                                                   }
-                                               } 
-                                           }
-                                        ?>
+                                    <?php
+                                       if(isset($_POST['submit_btn'])) {
+                                          $store_code_new = mysqli_real_escape_string($conn, $_POST['store_code'] ?? '');
+                                          $store_name_new = mysqli_real_escape_string($conn, $_POST['store_name'] ?? '');
+                                          $location_name  = mysqli_real_escape_string($conn, $_POST['location_name'] ?? '');
+                                          $company_name   = mysqli_real_escape_string($conn, $_POST['company_name'] ?? '');
+                                          $status_new     = mysqli_real_escape_string($conn, $_POST['status'] ?? 'true');
+                                          
+                                          $dup = mysqli_query($conn, "SELECT * FROM tbl_store_master WHERE store_name='$store_name_new' OR store_code='$store_code_new'");
+                                          if(mysqli_num_rows($dup) > 0) {
+                                              echo '<div class="alert alert-danger alert-dismissible fade1 show">
+                                                  <button type="button" class="close" data-dismiss="alert">&times;</button>
+                                                  <strong>Store Master Already exists!</strong>
+                                                  </div>';
+                                          } else {
+                                              $query = "INSERT INTO tbl_store_master(store_code,store_name,location_name,company_name,status) VALUES ('$store_code_new','$store_name_new','$location_name','$company_name','$status_new')";
+                                              if(mysqli_query($conn, $query)){
+                                                  echo '<div class="alert alert-success alert-dismissible fade1 show">
+                                                  <button type="button" class="close" data-dismiss="alert">&times;</button>
+                                                  <strong>Store Master Created Successfully!</strong>
+                                                </div>';
+                                              } else {
+                                                  echo '<div class="alert alert-danger alert-dismissible fade1 show">
+                                                  <button type="button" class="close" data-dismiss="alert">&times;</button>
+                                                  <strong>Store Master Creation Failed!</strong>
+                                                  </div>';
+                                              }
+                                          } 
+                                       }
+                                    ?>
                                     <div class="row">
                                        <div class="col-sm-6">
                                           <div class="form">
                                              <label>Store Code</label>
-                                             <input type="password" name="store_code" class="form-control" id="store_code" readonly value="<?php @$no = mysqli_query($conn, "SELECT id FROM  tbl_store_master ORDER BY id DESC");
+                                             <input type="text" name="store_code" class="form-control" id="store_code" readonly value="<?php @$no = mysqli_query($conn, "SELECT id FROM  tbl_store_master ORDER BY id DESC");
                                                 $po_no = mysqli_fetch_assoc($no);
                                                 echo 'SC'.($po_no['id']+1);
                                                 ?>">

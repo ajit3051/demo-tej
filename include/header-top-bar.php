@@ -2,6 +2,26 @@
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
+require_once(__DIR__ . '/store_permissions.php');
+$activeStoreData = get_active_store();
+$activeStoreName = $activeStoreData['store_name'];
+$isStoreAdmin    = $activeStoreData['is_admin'];
+
+$topbarStores = [];
+if ($isStoreAdmin) {
+    if (!isset($conn) || !($conn instanceof mysqli)) {
+        require_once(__DIR__ . '/config.php');
+        $conn = connect();
+    }
+    if (isset($conn) && ($conn instanceof mysqli)) {
+        $tq = mysqli_query($conn, "SELECT id, store_name, location_name FROM tbl_store_master WHERE status = 'true' ORDER BY store_name ASC");
+        if ($tq) {
+            while ($tr = mysqli_fetch_assoc($tq)) {
+                $topbarStores[] = $tr;
+            }
+        }
+    }
+}
 $currentUsername = $_SESSION['login_user'] ?? 'Admin';
 ?>
 <style>
@@ -210,7 +230,42 @@ body.sidebar-collapse .tej-top-navbar .logo .logo-mini {
       </a>
 
       <div class="navbar-custom-menu">
-         <ul class="nav navbar-nav">
+         <ul class="nav navbar-nav" style="display: flex; align-items: center;">
+            <!-- Active Store Switcher / Badge -->
+            <li class="dropdown dropdown-store tej-profile-dropdown" style="margin-right: 8px;">
+               <a href="#" class="dropdown-toggle tej-profile-toggle" data-toggle="<?= $isStoreAdmin ? 'dropdown' : '' ?>" aria-expanded="false" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; padding: 5px 14px; height: 36px; display: inline-flex; align-items: center; gap: 6px;">
+                  <i class="fa fa-building" style="font-size: 13px; color: #38bdf8;"></i>
+                  <span style="font-size: 12.5px; font-weight: 600; color: #f8fafc;">
+                     <?= htmlspecialchars($activeStoreName ?: 'No Store') ?>
+                  </span>
+                  <?php if ($isStoreAdmin): ?>
+                     <i class="fa fa-angle-down" style="font-size: 11px; color: #94a3b8; margin-left: 2px;"></i>
+                  <?php endif; ?>
+               </a>
+               <?php if ($isStoreAdmin): ?>
+               <ul class="dropdown-menu tej-profile-menu dropdown-menu-right" style="min-width: 250px; max-height: 400px; overflow-y: auto;">
+                  <li class="tej-profile-menu-header">
+                     <div class="name" style="font-size: 11.5px; text-transform: uppercase; color: #94a3b8;"><i class="fa fa-exchange"></i> Switch Active Store</div>
+                  </li>
+                  <li>
+                     <a href="?switch_store=ALL" style="<?= ($activeStoreName === 'ALL') ? 'background: #009688; color: #fff !important; font-weight: 700;' : '' ?>">
+                        <i class="fa fa-globe" style="color: #38bdf8;"></i>
+                        <span>All Stores (Global View)</span>
+                     </a>
+                  </li>
+                  <li class="divider"></li>
+                  <?php foreach ($topbarStores as $ts): ?>
+                     <li>
+                        <a href="?switch_store=<?= urlencode($ts['store_name']) ?>" style="<?= ($activeStoreName === $ts['store_name']) ? 'background: #009688; color: #fff !important; font-weight: 700;' : '' ?>">
+                           <i class="fa fa-store" style="color: #a855f7;"></i>
+                           <span><?= htmlspecialchars($ts['store_name']) ?> <small style="color: #94a3b8; font-size:10.5px;">(<?= htmlspecialchars($ts['location_name']) ?>)</small></span>
+                        </a>
+                     </li>
+                  <?php endforeach; ?>
+               </ul>
+               <?php endif; ?>
+            </li>
+
             <li class="dropdown dropdown-user tej-profile-dropdown">
                <a href="#" class="dropdown-toggle tej-profile-toggle" data-toggle="dropdown" aria-expanded="false">
                   <div class="tej-avatar-circle">

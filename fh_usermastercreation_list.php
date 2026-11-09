@@ -101,7 +101,7 @@
                                           <th>User Code</th>
                                           <th>User Name</th>
                                           <th>Mobile No</th>
-                                          <th>Store Name</th>
+                                          <th>Store (Code)</th>
                                           <th>Location</th>
                                           <th>User Type</th>
                                           <th>Created Date</th>
@@ -114,7 +114,7 @@
                                           $init_page = 1;
                                           $init_perpage = isset($_SESSION["_RECORDPERPAGE_"]) && $_SESSION["_RECORDPERPAGE_"] ? (int)$_SESSION["_RECORDPERPAGE_"] : 20;
                                           $init_offset = ($init_page - 1) * $init_perpage;
-                                          $query = mysqli_query($conn, "SELECT * FROM tbl_user_master ORDER BY id DESC LIMIT $init_offset, $init_perpage"); 
+                                          $query = mysqli_query($conn, "SELECT u.*, s.store_name FROM tbl_user_master u LEFT JOIN tbl_store_master s ON u.store_code = s.store_code ORDER BY u.id DESC LIMIT $init_offset, $init_perpage"); 
                                           $countQuery = mysqli_query($conn, "SELECT COUNT(*) as total FROM tbl_user_master");
                                           $countRow = mysqli_fetch_assoc($countQuery);
                                           $totalRecords = $countRow['total'] ?? 0;
@@ -159,7 +159,7 @@
                                            <td class="td-middle"><code><?php echo htmlspecialchars($user['user_code'] ?? ''); ?></code></td>
                                            <td class="td-middle-bold"><?php echo htmlspecialchars(substr($user['user_name'] ?? '',0,50)); ?></td>
                                            <td class="td-middle"><?php echo htmlspecialchars(substr($user['mobile_no'] ?? '',0,50)); ?></td>
-                                           <td class="td-middle"><?php echo htmlspecialchars(substr($user['store_name'] ?? '',0,50)); ?></td>
+                                           <td class="td-middle"><code><?php echo htmlspecialchars($user['store_code'] ?? ''); ?></code><?php if (!empty($user['store_name'])) { ?><br><small class="text-muted"><?php echo htmlspecialchars(substr($user['store_name'], 0, 50)); ?></small><?php } ?></td>
                                            <td class="td-middle"><?php echo htmlspecialchars(substr($user['location'] ?? '',0,50)); ?></td>
                                            <td class="td-middle"><span class="label label-info badge-info-sm"><?php echo htmlspecialchars(substr($user['user_type'] ?? '',0,50)); ?></span></td>
                                            <td class="td-middle-muted"><?php echo !empty($user['created_date']) ? date('d-m-Y H:i', strtotime($user['created_date'])) : '-'; ?></td>

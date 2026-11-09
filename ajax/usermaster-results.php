@@ -14,16 +14,21 @@ $exportType = isset($_REQUEST['export']) ? $_REQUEST['export'] : '';
 $params = '';
 $fields = array();
 
-$query = "SELECT * FROM tbl_user_master WHERE id > 0";
+$query = "SELECT u.*, s.store_name 
+          FROM tbl_user_master u 
+          LEFT JOIN tbl_store_master s ON u.store_code = s.store_code 
+          WHERE u.id > 0";
 
 if ($searchKey !== '') {
-   $query .= " AND (user_code LIKE CONCAT('%', ?, '%') 
-               OR user_name LIKE CONCAT('%', ?, '%') 
-               OR mobile_no LIKE CONCAT('%', ?, '%') 
-               OR store_name LIKE CONCAT('%', ?, '%') 
-               OR location LIKE CONCAT('%', ?, '%') 
-               OR user_type LIKE CONCAT('%', ?, '%'))";
-   $params .= 'ssssss';
+   $query .= " AND (u.user_code LIKE CONCAT('%', ?, '%') 
+               OR u.user_name LIKE CONCAT('%', ?, '%') 
+               OR u.mobile_no LIKE CONCAT('%', ?, '%') 
+               OR u.store_code LIKE CONCAT('%', ?, '%') 
+               OR s.store_name LIKE CONCAT('%', ?, '%') 
+               OR u.location LIKE CONCAT('%', ?, '%') 
+               OR u.user_type LIKE CONCAT('%', ?, '%'))";
+   $params .= 'sssssss';
+   $fields[] = $searchKey;
    $fields[] = $searchKey;
    $fields[] = $searchKey;
    $fields[] = $searchKey;
@@ -43,7 +48,7 @@ $totalRecords = $stmt ? $stmt->num_rows() : 0;
 $recordsPerPage = isset($_SESSION["_RECORDPERPAGE_"]) && $_SESSION["_RECORDPERPAGE_"] ? (int)$_SESSION["_RECORDPERPAGE_"] : 20;
 $offSet = ($page - 1) * $recordsPerPage;
 
-$query .= " ORDER BY id DESC LIMIT $offSet, $recordsPerPage";
+$query .= " ORDER BY u.id DESC LIMIT $offSet, $recordsPerPage";
 
 if (empty($fields)) {
    $stmt = $db->select($query);
@@ -102,7 +107,7 @@ if ($totalRecordsWithLimit > 0) {
          <td class="td-middle"><code>' . htmlspecialchars($user['user_code'] ?? '') . '</code></td>
          <td class="td-middle-bold">' . htmlspecialchars(substr($user['user_name'] ?? '', 0, 50)) . '</td>
          <td class="td-middle">' . htmlspecialchars(substr($user['mobile_no'] ?? '', 0, 50)) . '</td>
-         <td class="td-middle">' . htmlspecialchars(substr($user['store_name'] ?? '', 0, 50)) . '</td>
+         <td class="td-middle"><code>' . htmlspecialchars($user['store_code'] ?? '') . '</code>' . (!empty($user['store_name']) ? '<br><small class="text-muted">' . htmlspecialchars(substr($user['store_name'], 0, 50)) . '</small>' : '') . '</td>
          <td class="td-middle">' . htmlspecialchars(substr($user['location'] ?? '', 0, 50)) . '</td>
          <td class="td-middle"><span class="label label-info badge-info-sm">' . htmlspecialchars(substr($user['user_type'] ?? '', 0, 50)) . '</span></td>
          <td class="td-middle-muted">' . $createdDate . '</td>
@@ -137,6 +142,10 @@ if ($totalRecordsWithLimit > 0) {
                         <tr>
                            <th>Mobile Number</th>
                            <td>' . htmlspecialchars($user['mobile_no'] ?? '') . '</td>
+                        </tr>
+                        <tr>
+                           <th>Store Code</th>
+                           <td><code>' . htmlspecialchars($user['store_code'] ?? '') . '</code></td>
                         </tr>
                         <tr>
                            <th>Store Name</th>

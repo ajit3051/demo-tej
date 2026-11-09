@@ -4,13 +4,14 @@ $msg = '';
 $user_check = mysqli_real_escape_string($conn, $_SESSION['login_user'] ?? '');
 
 // Fetch current user details from tbl_user_master
-$user_query = mysqli_query($conn, "SELECT * FROM tbl_user_master WHERE user_name = '$user_check' OR user_code = '$user_check'");
+$user_query = mysqli_query($conn, "SELECT u.*, s.store_name FROM tbl_user_master u LEFT JOIN tbl_store_master s ON u.store_code = s.store_code WHERE u.user_name = '$user_check' OR u.user_code = '$user_check'");
 $user_data = mysqli_fetch_assoc($user_query);
 
 $display_name   = $user_data['user_name'] ?? $user_check;
 $user_code      = $user_data['user_code'] ?? 'N/A';
 $user_role      = $user_data['user_type'] ?? 'Administrator';
 $mobile_no      = $user_data['mobile_no'] ?? 'N/A';
+$store_code     = $user_data['store_code'] ?? '';
 $store_name     = $user_data['store_name'] ?? 'Main Store';
 $location       = $user_data['location'] ?? 'Headquarters';
 $status         = $user_data['status'] ?? 'Active';
@@ -175,6 +176,10 @@ if (isset($_POST['update_profile'])) {
                            <li>
                               <span class="label-title"><i class="fa fa-user-circle text-primary"></i> Username</span>
                               <span class="value-text"><?php echo htmlspecialchars($display_name); ?></span>
+                           </li>
+                           <li>
+                              <span class="label-title"><i class="fa fa-barcode text-primary"></i> Store Code</span>
+                              <span class="value-text"><code><?php echo htmlspecialchars($store_code); ?></code></span>
                            </li>
                            <li>
                               <span class="label-title"><i class="fa fa-building text-info"></i> Store Name</span>
