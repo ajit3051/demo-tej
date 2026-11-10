@@ -1296,13 +1296,13 @@ function validateAndSubmitPopup(actionType) {
         var el = document.getElementById(id);
         if (el) el.style.borderColor = '';
     });
-    ['gst_type','under_gst','bill_type','purchage_date','bill_number','invoice_number'].forEach(function(nm){
+    ['gst_type','under_gst','bill_type','created_date','purchage_date','bill_number','invoice_number'].forEach(function(nm){
         var el = document.querySelector('[name="' + nm + '"]');
         if (el) el.style.borderColor = '';
     });
 
     var mainFields = [
-        { name: 'purchage_date',    label: 'Purchase Date'   },
+        { name: 'created_date',     label: 'Date & Time'     },
         { name: 'bill_number',      label: 'Bill No.'        }
     ];
     var hasMain = false;
@@ -1438,9 +1438,12 @@ function validateAndSubmitPopup(actionType) {
     }
     
     // Copy Additional Data sidebar fields to hidden form fields (with null checks)
-    var sidebarPurchaseDate = document.getElementById('purchage_date');
+    var sidebarPurchaseDate = document.getElementById('created_date') || document.getElementById('purchage_date');
     if (sidebarPurchaseDate && document.getElementById('sidebar_purchage_date_hidden')) {
         document.getElementById('sidebar_purchage_date_hidden').value = sidebarPurchaseDate.value || '';
+    }
+    if (sidebarPurchaseDate && document.getElementById('sidebar_created_date_hidden')) {
+        document.getElementById('sidebar_created_date_hidden').value = sidebarPurchaseDate.value || '';
     }
     
     var sidebarBillNumber = document.getElementById('bill_number');

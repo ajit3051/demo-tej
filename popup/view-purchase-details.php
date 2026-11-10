@@ -31,8 +31,8 @@ if ($id) {
 						<fieldset>
 							<!-- Text input-->
 							<div class="col-md-3">
-								<label class="control-label">Date:</label>
-								<p><?= dateformat($purchage_date) ?></p>
+								<label class="control-label">Date & Time:</label>
+								<p><?= !empty($created_date) && $created_date != '0000-00-00 00:00:00' ? dateformat($created_date, 1) : dateformat($purchage_date) ?></p>
 							</div>
 							<!-- Text input-->
 							<div class="col-md-3">

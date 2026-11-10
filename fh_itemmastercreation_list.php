@@ -99,6 +99,7 @@
                                        <th>Brand</th>
                                        <th>MRP</th>
                                        <th>Selling Price</th>
+                                       <th>Created Date</th>
                                     </tr>
                                  </thead>
                                  <tbody id="itemmaster-list-results">

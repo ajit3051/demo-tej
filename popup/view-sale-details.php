@@ -57,7 +57,7 @@ foreach ($items as $item) {
     $total_amount  += (float)($item['amount'] ?? 0);
 }
 
-$purchage_date = !empty($purchage_date) ? dateformat($purchage_date) : date('d-m-Y');
+$purchage_date = !empty($created_date) && $created_date != '0000-00-00 00:00:00' ? dateformat($created_date, 1) : (!empty($purchage_date) ? dateformat($purchage_date, 1) : date('d-m-Y'));
 $account_name  = !empty($account_name) ? $account_name : 'Walk-in Customer';
 $mobile_number = !empty($mobile_number) ? $mobile_number : 'N/A';
 $pay_mode      = !empty($pay_mode) ? getPayModeByCode($pay_mode) : 'CASH';
@@ -84,7 +84,7 @@ $bill_type     = $bill_type ?? 'Tax-Bill';
                 </h5>
                 <div class="row">
                     <div class="col-md-3 col-sm-6" style="margin-bottom: 12px;">
-                        <span style="font-size: 12px; color: #64748b; font-weight: 600; display: block;">Date:</span>
+                        <span style="font-size: 12px; color: #64748b; font-weight: 600; display: block;">Date & Time:</span>
                         <strong style="font-size: 14px; color: #0f172a;"><?= $purchage_date ?></strong>
                     </div>
                     <div class="col-md-3 col-sm-6" style="margin-bottom: 12px;">

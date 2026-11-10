@@ -11,6 +11,9 @@ $page 		= isset($_POST['page']) && $_POST['page'] !== '' ? (int)$_POST['page'] :
 if ($page < 1) $page = 1;
 $sortOrder 	= !empty($_POST['sortOrder']) ? $_POST['sortOrder'] : 'DESC';
 $sortField 	= !empty($_POST['sortField']) ? $_POST['sortField'] : 'id';
+if ($sortField === 'purchage_date') {
+   $sortField = 'created_date';
+}
 $exportType = $_REQUEST['export'] ?? '';
 $searchKey  = $_REQUEST['search'] ?? '';
 $filterDate = isset($_REQUEST['filter_date']) ? trim($_REQUEST['filter_date']) : '';
@@ -51,7 +54,7 @@ $query = "SELECT $columns FROM tbl_bill WHERE id > 0";
 if ($filterDate !== 'all') {
    $parsedDate = date('Y-m-d', strtotime($filterDate));
    if (!empty($parsedDate) && $parsedDate !== '1970-01-01') {
-      $query .= " AND DATE(purchage_date) = ?";
+      $query .= " AND DATE(COALESCE(created_date, purchage_date)) = ?";
       $params .= 's';
       $fields[] = $parsedDate;
       $filterDate = $parsedDate;

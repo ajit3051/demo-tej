@@ -6,13 +6,22 @@
 $db = connect();
 
 $bill_no = $_GET['bill_no'] ?? '';
+$created_date = date('Y-m-d H:i:s');
+$purchage_date = date('Y-m-d H:i:s');
 
 if (isset($_POST['submit'])) {
    ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-   $purchage_date          = dateInSQLFormat($_POST['sidebar_purchage_date'] ?? ($_POST['purchage_date'] ?? date('Y-m-d')));
+   $created_date_raw       = $_POST['sidebar_created_date'] ?? ($_POST['created_date'] ?? ($_POST['sidebar_purchage_date'] ?? ($_POST['purchage_date'] ?? '')));
+   if (!empty($created_date_raw)) {
+      $parsed_time = strtotime($created_date_raw);
+      $created_date = ($parsed_time !== false) ? date('Y-m-d H:i:s', $parsed_time) : (dateInSQLFormat($created_date_raw) ?: date('Y-m-d H:i:s'));
+   } else {
+      $created_date = date('Y-m-d H:i:s');
+   }
+   $purchage_date          = $created_date;
    $bill_number            = $_POST['sidebar_bill_number'] ?? ($_POST['bill_number'] ?? '');
    $gst_type               = $_POST['sidebar_gst_type'] ?? ($_POST['gst_type'] ?? 'Inclusive');
    $under_gst               = $_POST['sidebar_under_gst'] ?? ($_POST['under_gst'] ?? 'Local');
@@ -123,7 +132,7 @@ error_reporting(E_ALL);
          $result = $db->insert(
             'INSERT INTO tbl_bill (purchage_date, bill_number, gst_type, under_gst, bill_type, item_name, barcode_number, article_no, item_type, category, brand, color, size, stock_qty, qty, balance_qty, mou_name, rate, purchase_price, percent_discount, discount_amt, net_price, gst, cgst, sgst, gst_amount, taxable_amount, amount, packing_amount, delivery_amount, other_amount, labour_amount, percent_total_discount, discount_total_amount, remarks, status, s_code, store_name, location, ac_code, account_name, mobile_number, pay_mode, pay_cash, pay_upi, pay_card, pay_credit, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             'sssssssssssssssssssssssssssssssssssssssssssssssss',
-            $purchage_date, $bill_number, $gst_type, $under_gst, $bill_type, $item_name[$k], $barcode, $cur_article, $item_type[$k], $category[$k], $brand[$k], $color[$k], $size[$k], $cur_stock_qty, $cur_qty, $cur_balance_qty, $mou_name[$k], $cur_rate, $cur_purchase_price, $cur_percent_discount, $cur_discount_amt, $cur_net_price, $cur_gst, $cgst, $sgst, $cur_gst_amount, $cur_taxable_amount, $cur_amount, $packing_amount, $delivery_amount, $other_amount, $labour_amount, $percent_total_discount, $discount_total_amount, $remarks, $status, $s_code, $store_name, $location, $popup_ac_code, $popup_account_name, $popup_mobile_number, $popup_pay_mode, $popup_pay_cash, $popup_pay_upi, $popup_pay_card, $popup_pay_credit, $current_date, $current_date
+            $purchage_date, $bill_number, $gst_type, $under_gst, $bill_type, $item_name[$k], $barcode, $cur_article, $item_type[$k], $category[$k], $brand[$k], $color[$k], $size[$k], $cur_stock_qty, $cur_qty, $cur_balance_qty, $mou_name[$k], $cur_rate, $cur_purchase_price, $cur_percent_discount, $cur_discount_amt, $cur_net_price, $cur_gst, $cgst, $sgst, $cur_gst_amount, $cur_taxable_amount, $cur_amount, $packing_amount, $delivery_amount, $other_amount, $labour_amount, $percent_total_discount, $discount_total_amount, $remarks, $status, $s_code, $store_name, $location, $popup_ac_code, $popup_account_name, $popup_mobile_number, $popup_pay_mode, $popup_pay_cash, $popup_pay_upi, $popup_pay_card, $popup_pay_credit, $created_date, $current_date
          );
 
          if (!$result) {
@@ -177,15 +186,15 @@ error_reporting(E_ALL);
 
          if ($isExist) {
             $result = $db->update(
-               "UPDATE tbl_bill SET purchage_date=?, gst_type=?, under_gst=?, bill_type=?, item_name=?, barcode_number=?, article_no=?, item_type=?, category=?, brand=?, color=?, size=?, stock_qty=?, qty=?, balance_qty=?, mou_name=?, rate=?, purchase_price=?, percent_discount=?, discount_amt=?, net_price=?, gst=?, cgst=?, sgst=?, gst_amount=?, taxable_amount=?, amount=?, packing_amount=?, delivery_amount=?, other_amount=?, labour_amount=?, percent_total_discount=?, discount_total_amount=?, remarks=?, status=?, s_code=?, store_name=?, location=?, ac_code=?, account_name=?, mobile_number=?, pay_mode=?, pay_cash=?, pay_upi=?, pay_card=?, pay_credit=?, updated_date=? WHERE id=?",
-               'sssssssssssssssssssssssssssssssssssssssssssssssi',
-               $purchage_date, $gst_type, $under_gst, $bill_type, $item_name[$k], $barcode, $cur_article, $item_type[$k], $category[$k], $brand[$k], $color[$k], $size[$k], $cur_stock_qty, $cur_qty, $cur_balance_qty, $mou_name[$k], $cur_rate, $cur_purchase_price, $cur_percent_discount, $cur_discount_amt, $cur_net_price, $cur_gst, $cgst, $sgst, $cur_gst_amount, $cur_taxable_amount, $cur_amount, $packing_amount, $delivery_amount, $other_amount, $labour_amount, $percent_total_discount, $discount_total_amount, $remarks, $status, $s_code, $store_name, $location, $popup_ac_code, $popup_account_name, $popup_mobile_number, $popup_pay_mode, $popup_pay_cash, $popup_pay_upi, $popup_pay_card, $popup_pay_credit, $current_date, $item_id[$k]
+               "UPDATE tbl_bill SET purchage_date=?, created_date=?, gst_type=?, under_gst=?, bill_type=?, item_name=?, barcode_number=?, article_no=?, item_type=?, category=?, brand=?, color=?, size=?, stock_qty=?, qty=?, balance_qty=?, mou_name=?, rate=?, purchase_price=?, percent_discount=?, discount_amt=?, net_price=?, gst=?, cgst=?, sgst=?, gst_amount=?, taxable_amount=?, amount=?, packing_amount=?, delivery_amount=?, other_amount=?, labour_amount=?, percent_total_discount=?, discount_total_amount=?, remarks=?, status=?, s_code=?, store_name=?, location=?, ac_code=?, account_name=?, mobile_number=?, pay_mode=?, pay_cash=?, pay_upi=?, pay_card=?, pay_credit=?, updated_date=? WHERE id=?",
+               str_repeat('s', 48) . 'i',
+               $purchage_date, $created_date, $gst_type, $under_gst, $bill_type, $item_name[$k], $barcode, $cur_article, $item_type[$k], $category[$k], $brand[$k], $color[$k], $size[$k], $cur_stock_qty, $cur_qty, $cur_balance_qty, $mou_name[$k], $cur_rate, $cur_purchase_price, $cur_percent_discount, $cur_discount_amt, $cur_net_price, $cur_gst, $cgst, $sgst, $cur_gst_amount, $cur_taxable_amount, $cur_amount, $packing_amount, $delivery_amount, $other_amount, $labour_amount, $percent_total_discount, $discount_total_amount, $remarks, $status, $s_code, $store_name, $location, $popup_ac_code, $popup_account_name, $popup_mobile_number, $popup_pay_mode, $popup_pay_cash, $popup_pay_upi, $popup_pay_card, $popup_pay_credit, $current_date, $item_id[$k]
             );
          } else {
             $result = $db->insert(
                'INSERT INTO tbl_bill (purchage_date, bill_number, gst_type, under_gst, bill_type, item_name, barcode_number, article_no, item_type, category, brand, color, size, stock_qty, qty, balance_qty, mou_name, rate, purchase_price, percent_discount, discount_amt, net_price, gst, cgst, sgst, gst_amount, taxable_amount, amount, packing_amount, delivery_amount, other_amount, labour_amount, percent_total_discount, discount_total_amount, remarks, status, s_code, store_name, location, ac_code, account_name, mobile_number, pay_mode, pay_cash, pay_upi, pay_card, pay_credit, created_date, updated_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                'sssssssssssssssssssssssssssssssssssssssssssssssss',
-               $purchage_date, $bill_number, $gst_type, $under_gst, $bill_type, $item_name[$k], $barcode, $cur_article, $item_type[$k], $category[$k], $brand[$k], $color[$k], $size[$k], $cur_stock_qty, $cur_qty, $cur_balance_qty, $mou_name[$k], $cur_rate, $cur_purchase_price, $cur_percent_discount, $cur_discount_amt, $cur_net_price, $cur_gst, $cgst, $sgst, $cur_gst_amount, $cur_taxable_amount, $cur_amount, $packing_amount, $delivery_amount, $other_amount, $labour_amount, $percent_total_discount, $discount_total_amount, $remarks, $status, $s_code, $store_name, $location, $popup_ac_code, $popup_account_name, $popup_mobile_number, $popup_pay_mode, $popup_pay_cash, $popup_pay_upi, $popup_pay_card, $popup_pay_credit, $current_date, $current_date
+               $purchage_date, $bill_number, $gst_type, $under_gst, $bill_type, $item_name[$k], $barcode, $cur_article, $item_type[$k], $category[$k], $brand[$k], $color[$k], $size[$k], $cur_stock_qty, $cur_qty, $cur_balance_qty, $mou_name[$k], $cur_rate, $cur_purchase_price, $cur_percent_discount, $cur_discount_amt, $cur_net_price, $cur_gst, $cgst, $sgst, $cur_gst_amount, $cur_taxable_amount, $cur_amount, $packing_amount, $delivery_amount, $other_amount, $labour_amount, $percent_total_discount, $discount_total_amount, $remarks, $status, $s_code, $store_name, $location, $popup_ac_code, $popup_account_name, $popup_mobile_number, $popup_pay_mode, $popup_pay_cash, $popup_pay_upi, $popup_pay_card, $popup_pay_credit, $created_date, $current_date
             );
          }
 
@@ -1125,7 +1134,8 @@ while ($z = $szRes->fetch_assoc()) {
                      <div class="col-md-6">
                         <div class="modern-form-group">
                            <label>Date & Time</label>
-                           <input type="text" class="modern-input datetimepicker" name="purchage_date" id="purchage_date" placeholder="Enter Date & Time" value="<?= $purchage_date ?? '' ?>">
+                           <input type="text" class="modern-input datetimepicker" name="created_date" id="created_date" placeholder="Enter Date & Time" value="<?= !empty($created_date) && $created_date != '0000-00-00 00:00:00' ? dateformat($created_date, 1) : (!empty($purchage_date) ? dateformat($purchage_date, 1) : dateformat(date('Y-m-d H:i:s'), 1)) ?>">
+                           <input type="hidden" name="purchage_date" id="purchage_date" value="<?= !empty($created_date) && $created_date != '0000-00-00 00:00:00' ? dateformat($created_date, 1) : (!empty($purchage_date) ? dateformat($purchage_date, 1) : dateformat(date('Y-m-d H:i:s'), 1)) ?>">
                         </div>
                      </div>
                      <div class="col-md-6">
@@ -2083,6 +2093,7 @@ while ($z = $szRes->fetch_assoc()) {
                   
                   <!-- Hidden fields to capture Additional Data sidebar fields -->
                   <input type="hidden" name="sidebar_purchage_date" id="sidebar_purchage_date_hidden">
+                  <input type="hidden" name="sidebar_created_date" id="sidebar_created_date_hidden">
                   <input type="hidden" name="sidebar_bill_number" id="sidebar_bill_number_hidden">
                   <input type="hidden" name="sidebar_s_code" id="sidebar_s_code_hidden">
                   <input type="hidden" name="sidebar_store_name" id="sidebar_store_name_hidden">
@@ -2251,6 +2262,13 @@ while ($z = $szRes->fetch_assoc()) {
    leftPanel.classList.remove("active");
    overlay.classList.remove("active");
    }
+   $(document).on('change blur input dp.change', '#created_date', function() {
+      $('#purchage_date').val($(this).val());
+      var sidebarHidden = document.getElementById('sidebar_purchage_date_hidden');
+      if (sidebarHidden) sidebarHidden.value = $(this).val();
+      var sidebarCreatedHidden = document.getElementById('sidebar_created_date_hidden');
+      if (sidebarCreatedHidden) sidebarCreatedHidden.value = $(this).val();
+   });
 </script>
 
 <?php 

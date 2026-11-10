@@ -85,8 +85,8 @@ if ($totalRecordsWithLimit > 0) {
       }
 
       $genderTxt = ($user['gender'] == '1') ? 'Male' : (($user['gender'] == '0') ? 'Female' : htmlspecialchars($user['gender'] ?? ''));
-      $createdDate = !empty($user['created_date']) ? date('d-m-Y H:i', strtotime($user['created_date'])) : '-';
-      $updatedDate = !empty($user['updated_date']) ? date('d-m-Y H:i', strtotime($user['updated_date'])) : '-';
+      $createdDate = !empty($user['created_date']) ? (dateformat($user['created_date'], 1) ?: '-') : '-';
+      $updatedDate = !empty($user['updated_date']) ? (dateformat($user['updated_date'], 1) ?: '-') : '-';
 
       // Table Row
       $html .= '<tr>
@@ -165,11 +165,11 @@ if ($totalRecordsWithLimit > 0) {
                         </tr>
                         <tr>
                            <th>Created Date</th>
-                           <td>' . (!empty($user['created_date']) ? date('d-m-Y H:i:s', strtotime($user['created_date'])) : '-') . '</td>
+                           <td>' . (!empty($user['created_date']) ? (dateformat($user['created_date'], 1) ?: '-') : '-') . '</td>
                         </tr>
                         <tr>
                            <th>Updated Date</th>
-                           <td>' . (!empty($user['updated_date']) ? date('d-m-Y H:i:s', strtotime($user['updated_date'])) : '-') . '</td>
+                           <td>' . (!empty($user['updated_date']) ? (dateformat($user['updated_date'], 1) ?: '-') : '-') . '</td>
                         </tr>
                      </tbody>
                   </table>

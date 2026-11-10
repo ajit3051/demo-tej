@@ -7,38 +7,41 @@ $db = connect();
 
 $today = date("Y-m-d");
 
-$page       = $_REQUEST['page'];
-$sortOrder    = $_REQUEST['sortOrder'];
-$sortField    = $_REQUEST['sortField'];
-$formId       = $_REQUEST['formId'];
-$searchKey       = $_REQUEST['search'];
-$from_date       = $_REQUEST['from_date'];
-$to_date       = $_REQUEST['to_date'];
-$exportType       = $_REQUEST['export'];
+$page       = $_REQUEST['page'] ?? 1;
+$sortOrder    = $_REQUEST['sortOrder'] ?? 'DESC';
+$sortField    = $_REQUEST['sortField'] ?? 'id';
+if ($sortField === 'purchage_date') {
+   $sortField = 'created_date';
+}
+$formId       = $_REQUEST['formId'] ?? '';
+$searchKey       = $_REQUEST['search'] ?? '';
+$from_date       = $_REQUEST['from_date'] ?? '';
+$to_date       = $_REQUEST['to_date'] ?? '';
+$exportType       = $_REQUEST['export'] ?? '';
 
 $params = '';
 $fields = array();
 
 if ($exportType) {
-   $columns = 'MAX(purchage_date) as purchage_date, bill_number, MAX(invoice_number) as invoice_number, MAX(account_name) as account_name, MAX(gst_type) as gst_type, SUM(qty) as qty, SUM(CAST(gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(amount AS DECIMAL(10,2))) as amount, MAX(status) as status';
+   $columns = 'MAX(purchage_date) as purchage_date, MAX(created_date) as created_date, bill_number, MAX(invoice_number) as invoice_number, MAX(account_name) as account_name, MAX(gst_type) as gst_type, SUM(qty) as qty, SUM(CAST(gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(amount AS DECIMAL(10,2))) as amount, MAX(status) as status';
 } else {
-   $columns = 'MAX(id) as id, MAX(purchage_date) as purchage_date, bill_number, MAX(invoice_number) as invoice_number, MAX(account_name) as account_name, MAX(gst_type) as gst_type, SUM(qty) as qty, SUM(CAST(gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(amount AS DECIMAL(10,2))) as amount, MAX(status) as status';
+   $columns = 'MAX(id) as id, MAX(purchage_date) as purchage_date, MAX(created_date) as created_date, bill_number, MAX(invoice_number) as invoice_number, MAX(account_name) as account_name, MAX(gst_type) as gst_type, SUM(qty) as qty, SUM(CAST(gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(amount AS DECIMAL(10,2))) as amount, MAX(status) as status';
 }
 
 $query = "SELECT $columns FROM tbl_purchase WHERE id > 0";
 
 if ($formId == 'latestsearchForm') {
-   $query .= " AND DATE(created_date) = ?";
+   $query .= " AND DATE(COALESCE(created_date, purchage_date)) = ?";
    $params .= 's';
    $fields[] = $today;
 }
 if ($from_date) {
-   $query .= " AND purchage_date >= ?";
+   $query .= " AND COALESCE(DATE(created_date), purchage_date) >= ?";
    $params .= 's';
    $fields[] = dateInSQLFormat($from_date);
 }
 if ($to_date) {
-   $query .= " AND purchage_date <= ?";
+   $query .= " AND COALESCE(DATE(created_date), purchage_date) <= ?";
    $params .= 's';
    $fields[] = dateInSQLFormat($to_date);
 }
@@ -115,7 +118,7 @@ if ($totalRecordsWithLimit > 0) {
                <label class="s_no" for="checkbox' . $i . '">' . $i . '</label>
             </div>
          </td>
-         <td>' . dateformat($row['purchage_date']) . '</td>
+         <td>' . (!empty($row['created_date']) && $row['created_date'] != '0000-00-00 00:00:00' ? dateformat($row['created_date'], 1) : dateformat($row['purchage_date'] ?? '')) . '</td>
          <td>' . $row['bill_number'] . '</td>
          <td>' . $row['invoice_number'] . '</td>
          <td>' . $row['account_name'] . '</td>
@@ -139,7 +142,7 @@ if ($totalRecordsWithLimit > 0) {
          </td>
          <td style="white-space: nowrap;">
             <a onClick="return confirm(\'Are you sure you want to Update Bill?\')" href="purchase-master-creation.php?bill_no=' . urlencode($row['bill_number'] ?? '') . '" class="btn-add btn-xs" style="background-color:#337ab7; border-color:#2e6da4;" data-toggle="tooltip" title="Update Bill"><i class="fa fa-pencil"></i></a>
-            <a class="btn btn-danger btn-xs" onclick="deleterecord(' . ($row['id'] ?? 0) . ')" href="javascript:void(0);" data-toggle="tooltip" title="Delete"><i class="fa fa-trash"></i></a>
+            <a class="btn-add btn-xs" style="background-color:#d9534f; border-color:#d43f3a;" onclick="deleterecord(' . ($row['id'] ?? 0) . ')" href="javascript:void(0);" data-toggle="tooltip" title="Delete"><i class="fa fa-trash"></i></a>
          </td>
       </tr>';
    }

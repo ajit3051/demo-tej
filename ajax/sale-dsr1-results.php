@@ -11,6 +11,9 @@ $page 		= isset($_REQUEST['page']) && $_REQUEST['page'] !== '' ? (int)$_REQUEST[
 if ($page < 1) $page = 1;
 $sortOrder 	= !empty($_REQUEST['sortOrder']) ? $_REQUEST['sortOrder'] : 'DESC';
 $sortField 	= !empty($_REQUEST['sortField']) ? $_REQUEST['sortField'] : 'purchage_date';
+if ($sortField === 'purchage_date') {
+   $sortField = 'created_date';
+}
 $formId 	= $_REQUEST['formId'] ?? '';
 $searchKey 	= $_REQUEST['search'] ?? '';
 $from_date 	= $_REQUEST['from_date'] ?? '';
@@ -22,23 +25,24 @@ $fields = array();
 
 $whereClause = "WHERE id > 0";
 if ($formId == 'latestsearchForm') {
-   $whereClause .= " AND DATE(created_date) = ?";
+   $whereClause .= " AND DATE(COALESCE(created_date, purchage_date)) = ?";
    $params .= 's';
    $fields[] = $today;
 }
 if ($from_date) {
-   $whereClause .= " AND purchage_date >= ?";
+   $whereClause .= " AND COALESCE(DATE(created_date), purchage_date) >= ?";
    $params .= 's';
    $fields[] = dateInSQLFormat($from_date);
 }
 if ($to_date) {
-   $whereClause .= " AND purchage_date <= ?";
+   $whereClause .= " AND COALESCE(DATE(created_date), purchage_date) <= ?";
    $params .= 's';
    $fields[] = dateInSQLFormat($to_date);
 }
 
 $query = "SELECT 
     MAX(b.purchage_date) as purchage_date, 
+    MAX(b.created_date) as created_date, 
     SUM(b.total_qty) AS total_qty,
     COALESCE(SUM(b.bill_cash), 0) AS total_cash,
     COALESCE(SUM(b.bill_upi), 0) AS total_upi,
@@ -69,7 +73,7 @@ FROM (
     $whereClause
     GROUP BY bill_number
 ) b
-GROUP BY DATE(b.purchage_date)";
+GROUP BY DATE(COALESCE(b.created_date, b.purchage_date))";
 
 if ($searchKey) {
    $query .= " HAVING (MAX(b.barcode_number) LIKE CONCAT('%', ?, '%') OR MAX(b.bill_number) LIKE CONCAT('%', ?, '%') OR MAX(b.account_name) LIKE CONCAT('%', ?, '%') OR MAX(b.gst_type) LIKE CONCAT('%', ?, '%') OR MAX(b.item_name) LIKE CONCAT('%', ?, '%') OR CAST(SUM(b.total_qty) AS CHAR) LIKE CONCAT('%', ?, '%') OR CAST(SUM(b.total_gst) AS CHAR) LIKE CONCAT('%', ?, '%') OR CAST(SUM(b.total_amt) AS CHAR) LIKE CONCAT('%', ?, '%'))";
@@ -137,7 +141,7 @@ if ($totalRecordsWithLimit > 0) {
 
       $html .= '<tr>
          <td>' . ($offSet + $i) . ' </td>
-         <td>' . dateformat($row['purchage_date']) . '</td>
+         <td>' . dateformat(!empty($row['created_date']) && $row['created_date'] != '0000-00-00 00:00:00' ? $row['created_date'] : $row['purchage_date']) . '</td>
          <td>' . ($row['total_qty'] ?? 0) . '</td>
          <td>' . number_format((float)($row['total_cash'] ?? 0), 2) . '</td>
          <td>' . number_format((float)($row['total_upi'] ?? 0), 2) . '</td>

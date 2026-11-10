@@ -136,7 +136,7 @@
                            <th>Details</th>
                            <th>Send</th>
                            <th>Action</th>
-                           <th>Bill Date</th>
+                           <th>Date & Time</th>
                            <th>Bill No</th>
                            <th>Invoice No</th>
                            <th>Invoice Date</th>
@@ -261,7 +261,7 @@
                            <th>Details</th>
                            <th>Send</th>
                            <th>Action</th>
-                           <th>Bill Date</th>
+                           <th>Date & Time</th>
                            <th>Bill No</th>
                            <th>Invoice No</th>
                            <th>Invoice Date</th>

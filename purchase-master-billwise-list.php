@@ -8,23 +8,24 @@ $validationHelper = new validation();
 $db = connect();
 $bill_no = $_GET['bill_no'];
 
-if ($_POST['action'] == 'delete' && $_POST['id'] != '') {
+if (($_POST['action'] == 'delete' || $_POST['action'] == 'delete_bulk') && (!empty($_POST['id']) || !empty($_POST['ids']))) {
 
-   $id = $_POST['id'];
-
-   if ($id) {
-
-      $res = $db->delete("DELETE FROM tbl_purchase WHERE id=?", 'i', $id);
-
-      if ($res) {
-         $msg = 'Record deleted successfully';
-         $code = '';
-      } else {
-         $msg = 'Failed!';
-         $code = '1';
+   if (!empty($_POST['ids'])) {
+      $ids = array_filter(array_map('intval', explode(',', $_POST['ids'])));
+      if (!empty($ids)) {
+         $inClause = implode(',', $ids);
+         $res = $db->query("DELETE FROM tbl_purchase WHERE id IN ($inClause)");
       }
    } else {
-      $msg = "Something went wrong, Try again!";
+      $id = (int)$_POST['id'];
+      $res = $db->delete("DELETE FROM tbl_purchase WHERE id=?", 'i', $id);
+   }
+
+   if ($res) {
+      $msg = 'Record deleted successfully';
+      $code = '';
+   } else {
+      $msg = 'Failed!';
       $code = '1';
    }
 
@@ -140,7 +141,7 @@ if ($_POST['action'] == 'delete' && $_POST['id'] != '') {
                      <thead>
                         <tr class="info">
                            <th>SrNo</th>
-                           <th>Date</th>
+                           <th>Date & Time</th>
                            <th>Bill No</th>
                            <th>Invoice No</th>
                            <th>Account Name</th>
@@ -149,7 +150,7 @@ if ($_POST['action'] == 'delete' && $_POST['id'] != '') {
                            <th>GST Amt</th>
                            <th>Bill Amt</th>
                            <th>Status</th>
-                           <th>Dtails</th>
+                           <th>Details</th>
                            <th>Action</th>
                         </tr>
                      </thead>
@@ -158,26 +159,33 @@ if ($_POST['action'] == 'delete' && $_POST['id'] != '') {
                      </tbody>
                   </table>
                </div>
-               <div class="row">
-                   <div class="col-sm-8">
+               <style>
+                  .dwc {
+                     font-size: 13px;
+                     height: 38px;
+                     width: auto;
+                     padding: 0 18px;
+                     font-weight: 600;
+                     border-radius: 50px;
+                     display: inline-flex;
+                     align-items: center;
+                     justify-content: center;
+                     gap: 6px;
+                     box-shadow: 0 2px 6px rgba(229,57,53,0.2);
+                     transition: all 0.2s ease;
+                  }
+                  .dwc:hover {
+                     transform: translateY(-1px);
+                     box-shadow: 0 4px 10px rgba(229,57,53,0.3);
+                  }
+               </style>
+               <div class="row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px;">
+                   <div class="col-sm-8 col-xs-12">
                        <div id="pagination-latest-result"></div>
                    </div>
-                    <style>
-                       .dwc{
-                           font-size:16px;
-                           height: 50px;
-                           width: 300px;
-                           font-weight: 600;
-                           border-color:#FF0000;
-                           border-radius: 50px;
-                       }
-                   </style>
-                   
-                   <div class="col-sm-4" style="text-align:right;">
-                       <button class="btn btn-danger btn-sm dwc" onclick="deleteRow('latestRecord')"><i class="fa fa-trash"></i><span style="margin-left:3px;">Delete with Checkbox</span></button>
+                   <div class="col-sm-4 col-xs-12" style="text-align:right;">
+                       <button type="button" class="btn btn-danger btn-sm dwc" onclick="deleteRow('latest')"><i class="fa fa-trash"></i><span style="margin-left:4px;">Delete Selected</span></button>
                    </div>
-               
-
                </div>
             </div>
          </div>
@@ -267,7 +275,7 @@ if ($_POST['action'] == 'delete' && $_POST['id'] != '') {
                      <thead>
                         <tr class="info">
                            <th>SrNo</th>
-                           <th>Date</th>
+                           <th>Date & Time</th>
                            <th>Bill No</th>
                            <th>Invoice No</th>
                            <th>Account Name</th>
@@ -276,7 +284,7 @@ if ($_POST['action'] == 'delete' && $_POST['id'] != '') {
                            <th>GST Amt</th>
                            <th>Bill Amt</th>
                            <th>Status</th>
-                           <th>Dtails</th>
+                           <th>Details</th>
                            <th>Action</th>
                         </tr>
                      </thead>
@@ -285,14 +293,13 @@ if ($_POST['action'] == 'delete' && $_POST['id'] != '') {
                      </tbody>
                   </table>
                </div>
-               <div class="row">
-                   <div class="col-sm-8">
+               <div class="row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px;">
+                   <div class="col-sm-8 col-xs-12">
                        <div id="pagination-result"></div>
                    </div>
-                    <div class="col-sm-4" style="text-align:right;">
-                       <button class="btn btn-danger btn-sm dwc" onclick="deleteRow('latestRecord')"><i class="fa fa-trash"></i><span style="margin-left:3px;">Delete with Checkbox</span></button>
+                   <div class="col-sm-4 col-xs-12" style="text-align:right;">
+                       <button type="button" class="btn btn-danger btn-sm dwc" onclick="deleteRow('main')"><i class="fa fa-trash"></i><span style="margin-left:4px;">Delete Selected</span></button>
                    </div>
-                   
                </div>
                
             </div>
@@ -344,8 +351,9 @@ if ($_POST['action'] == 'delete' && $_POST['id'] != '') {
    </div>
 </section>
 <form action="" id="deleteform" method="post" autocomplete="off">
-   <input type="hidden" name="action" value="delete">
+   <input type="hidden" name="action" id="deleteaction" value="delete">
    <input type="hidden" name="id" id="deleteid">
+   <input type="hidden" name="ids" id="deleteids">
 </form>
 <?php include('include/footer-2.php'); ?>
 </div>

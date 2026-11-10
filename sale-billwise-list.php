@@ -159,7 +159,7 @@ if ($_POST['action'] == 'delete' && $_POST['id'] != '') {
                      <thead>
                         <tr class="info">
                            <th>SrNo</th>
-                           <th>Date</th>
+                           <th>Date & Time</th>
                            <th>Bill No</th>
                            <th>Pay Mode</th>
                            <th>Name</th>
@@ -337,7 +337,7 @@ if ($_POST['action'] == 'delete' && $_POST['id'] != '') {
                      <thead>
                         <tr class="info">
                            <th>SrNo</th>
-                           <th>Date</th>
+                           <th>Date & Time</th>
                            <th>Bill No</th>
                            <th>Pay Mode</th>
                            <th>Name</th>

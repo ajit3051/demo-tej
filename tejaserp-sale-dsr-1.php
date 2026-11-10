@@ -55,7 +55,7 @@
        $dateCondition = "1 = 1";
        if ($recent) {
            $currentDate = date('Y-m-d');
-           $dateCondition = "DATE(created_date) = '{$currentDate}'";
+           $dateCondition = "DATE(COALESCE(created_date, purchage_date)) = '{$currentDate}'";
        }
 
        $sql = "SELECT 

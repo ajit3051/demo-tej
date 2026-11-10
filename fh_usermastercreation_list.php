@@ -162,8 +162,8 @@
                                            <td class="td-middle"><code><?php echo htmlspecialchars($user['store_code'] ?? ''); ?></code><?php if (!empty($user['store_name'])) { ?><br><small class="text-muted"><?php echo htmlspecialchars(substr($user['store_name'], 0, 50)); ?></small><?php } ?></td>
                                            <td class="td-middle"><?php echo htmlspecialchars(substr($user['location'] ?? '',0,50)); ?></td>
                                            <td class="td-middle"><span class="label label-info badge-info-sm"><?php echo htmlspecialchars(substr($user['user_type'] ?? '',0,50)); ?></span></td>
-                                           <td class="td-middle-muted"><?php echo !empty($user['created_date']) ? date('d-m-Y H:i', strtotime($user['created_date'])) : '-'; ?></td>
-                                           <td class="td-middle-muted"><?php echo !empty($user['updated_date']) ? date('d-m-Y H:i', strtotime($user['updated_date'])) : '-'; ?></td>
+                                           <td class="td-middle-muted"><?php echo !empty($user['created_date']) ? (dateformat($user['created_date'], 1) ?: '-') : '-'; ?></td>
+                                           <td class="td-middle-muted"><?php echo !empty($user['updated_date']) ? (dateformat($user['updated_date'], 1) ?: '-') : '-'; ?></td>
                                            <td class="td-center-middle"><?php echo ($user['gender'] == '1') ? 'Male' : (($user['gender'] == '0') ? 'Female' : htmlspecialchars($user['gender'] ?? '')); ?></td>
                                         </tr>
                                         <?php } ?>

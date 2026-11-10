@@ -11,6 +11,9 @@ $today = date("Y-m-d");
 $page       = isset($_REQUEST['page']) && (int)$_REQUEST['page'] > 0 ? (int)$_REQUEST['page'] : 1;
 $sortOrder  = !empty($_REQUEST['sortOrder']) && in_array(strtoupper($_REQUEST['sortOrder']), array('ASC', 'DESC')) ? strtoupper($_REQUEST['sortOrder']) : 'DESC';
 $sortField  = !empty($_REQUEST['sortField']) ? $_REQUEST['sortField'] : 'id';
+if ($sortField === 'purchage_date') {
+   $sortField = 'created_date';
+}
 $formId     = $_REQUEST['formId'] ?? '';
 $searchKey  = isset($_REQUEST['search']) ? trim($_REQUEST['search']) : '';
 $from_date  = $_REQUEST['from_date'] ?? '';
@@ -21,25 +24,25 @@ $params = '';
 $fields = array();
 
 if ($exportType) {
-   $columns = 'purchage_date, bill_number, invoice_number, invoice_date, account_name, barcode_number, item_name, category, brand, size, qty, mou_name, rate, purchase_price, percent_discount, discount_amt, net_price, gst,  gst_amount, taxable_amount, amount';
+   $columns = 'purchage_date, created_date, bill_number, invoice_number, invoice_date, account_name, barcode_number, item_name, category, brand, size, qty, mou_name, rate, purchase_price, percent_discount, discount_amt, net_price, gst,  gst_amount, taxable_amount, amount';
 } else {
-   $columns = 'id, purchage_date, bill_number, invoice_number, invoice_date, account_name, barcode_number, item_name, category, brand, size, qty, mou_name, rate, purchase_price, percent_discount, discount_amt, net_price, gst,  gst_amount, taxable_amount, amount';
+   $columns = 'id, purchage_date, created_date, bill_number, invoice_number, invoice_date, account_name, barcode_number, item_name, category, brand, size, qty, mou_name, rate, purchase_price, percent_discount, discount_amt, net_price, gst,  gst_amount, taxable_amount, amount';
 }
 
 $query = "SELECT $columns FROM tbl_purchase WHERE id > 0";
 
 if ($formId == 'latestsearchForm') {
-   $query .= " AND DATE(created_date) = ?";
+   $query .= " AND DATE(COALESCE(created_date, purchage_date)) = ?";
    $params .= 's';
    $fields[] = $today;
 }
 if ($from_date) {
-   $query .= " AND purchage_date >= ?";
+   $query .= " AND COALESCE(DATE(created_date), purchage_date) >= ?";
    $params .= 's';
    $fields[] = dateInSQLFormat($from_date);
 }
 if ($to_date) {
-   $query .= " AND purchage_date <= ?";
+   $query .= " AND COALESCE(DATE(created_date), purchage_date) <= ?";
    $params .= 's';
    $fields[] = dateInSQLFormat($to_date);
 }
@@ -125,10 +128,10 @@ if ($totalRecordsWithLimit > 0) {
              <a onClick="return confirm(\'Are you sure you want to Update Bill?\')" href="purchase-master-creation.php?bill_no=' . urlencode($row['bill_number'] ?? '') . '" class="btn-add btn-xs" style="background-color:#337ab7; border-color:#2e6da4;" data-toggle="tooltip" title="Update Bill"><i class="fa fa-pencil"></i></a>
              <a class="btn btn-danger btn-xs" onclick="deleterecord(' . ($row['id'] ?? 0) . ')" href="javascript:void(0);" data-toggle="tooltip" title="Delete"><i class="fa fa-trash"></i></a>
           </td>
-         <td>' . dateformat($row['purchage_date'] ?? '') . '</td>
+         <td>' . (!empty($row['created_date']) && $row['created_date'] != '0000-00-00 00:00:00' ? dateformat($row['created_date'], 1) : dateformat($row['purchage_date'] ?? '')) . '</td>
          <td>' . htmlspecialchars($row['bill_number'] ?? '') . '</td>
          <td>' . htmlspecialchars($row['invoice_number'] ?? '') . '</td>
-         <td>' . dateformat($row['invoice_date'] ?? '') . '</td>
+         <td>' . (!empty($row['invoice_date']) && $row['invoice_date'] != '1970-01-01' && $row['invoice_date'] != '0000-00-00' ? dateformat($row['invoice_date']) : '') . '</td>
          <td>' . htmlspecialchars($row['account_name'] ?? '') . '</td>
          <td>' . htmlspecialchars($row['barcode_number'] ?? '') . '</td>
          <td>' . htmlspecialchars($row['item_name'] ?? '') . '</td>

@@ -10,6 +10,9 @@ $today = date("Y-m-d");
 $page 		= $_POST['page'] ?? 1;
 $sortOrder 	= $_POST['sortOrder'] ?? 'DESC';
 $sortField 	= $_POST['sortField'] ?? 'id';
+if ($sortField === 'purchage_date') {
+   $sortField = 'created_date';
+}
 $exportType = $_REQUEST['export'] ?? '';
 $search     = trim($_REQUEST['search'] ?? '');
 
@@ -18,6 +21,7 @@ $fields = array();
 
 if ($exportType) {
    $columns = "MAX(purchage_date) as purchage_date, 
+               MAX(created_date) as created_date, 
                bill_number, 
                MAX(invoice_number) as invoice_number, 
                MAX(account_name) as account_name, 
@@ -29,6 +33,7 @@ if ($exportType) {
    $columns = "MAX(id) as id, 
                MAX(invoice_number) as invoice_number, 
                MAX(purchage_date) as purchage_date, 
+               MAX(created_date) as created_date, 
                bill_number, 
                MAX(account_name) as account_name, 
                MAX(gst_type) as gst_type, 
@@ -87,7 +92,7 @@ if ($totalRecordsWithLimit > 0) {
             </div>
          </td>
          <td> <label class="s_no" for="checkbox'. $i .'">'. $i .'</label></td>
-         <td>'. dateformat($row['purchage_date'] ?? '') .'</td>
+         <td>'. (!empty($row['created_date']) && $row['created_date'] != '0000-00-00 00:00:00' ? dateformat($row['created_date'], 1) : dateformat($row['purchage_date'] ?? '')) .'</td>
          <td>'. ($row['bill_number'] ?? '') .'</td>
          <td>'. ($row['invoice_number'] ?? '') .'</td>
          <td>'. ($row['account_name'] ?? '') .'</td>

@@ -10,6 +10,9 @@ $today = date("Y-m-d");
 $page       = $_REQUEST['page'] ?? 1;
 $sortOrder  = !empty($_REQUEST['sortOrder']) ? $_REQUEST['sortOrder'] : 'DESC';
 $sortField  = !empty($_REQUEST['sortField']) ? $_REQUEST['sortField'] : 'id';
+if ($sortField === 'purchage_date') {
+   $sortField = 'created_date';
+}
 $formId     = $_REQUEST['formId'] ?? '';
 $searchKey  = $_REQUEST['search'] ?? '';
 $from_date  = $_REQUEST['from_date'] ?? '';
@@ -20,7 +23,7 @@ $params = '';
 $fields = array();
 
 if ($exportType) {
-   $columns = 'TB.purchage_date, TB.bill_number, TB.barcode_number, TB.item_name, TB.category, TB.qty, TB.rate, TB.gst_amount, TB.amount, TB.account_name, TB.mobile_number, COALESCE(TPM.paymode_name, TB.pay_mode) as paymode_name';
+   $columns = 'TB.purchage_date, TB.created_date, TB.bill_number, TB.barcode_number, TB.item_name, TB.category, TB.qty, TB.rate, TB.gst_amount, TB.amount, TB.account_name, TB.mobile_number, COALESCE(TPM.paymode_name, TB.pay_mode) as paymode_name';
 } else {
    $columns = 'TB.*, COALESCE(TPM.paymode_name, TB.pay_mode) as paymode_name';
 }
@@ -28,17 +31,17 @@ if ($exportType) {
 $query = "SELECT $columns FROM tbl_bill as TB LEFT JOIN tbl_paymode_master as TPM ON (TPM.paymode_code = TB.pay_mode OR TPM.paymode_name = TB.pay_mode) WHERE TB.id > 0";
 
 if ($formId == 'latestsearchForm') {
-   $query .= " AND DATE(TB.created_date) = ?";
+   $query .= " AND DATE(COALESCE(TB.created_date, TB.purchage_date)) = ?";
    $params .= 's';
    $fields[] = $today;
 }
 if ($from_date) {
-   $query .= " AND TB.purchage_date >= ?";
+   $query .= " AND COALESCE(DATE(TB.created_date), TB.purchage_date) >= ?";
    $params .= 's';
    $fields[] = dateInSQLFormat($from_date);
 }
 if ($to_date) {
-   $query .= " AND TB.purchage_date <= ?";
+   $query .= " AND COALESCE(DATE(TB.created_date), TB.purchage_date) <= ?";
    $params .= 's';
    $fields[] = dateInSQLFormat($to_date);
 }
@@ -160,7 +163,7 @@ if ($totalRecordsWithLimit > 0) {
 
       $html .= '<tr>
          <td>' . $i . '</td>
-         <td>' . dateformat($row['purchage_date'] ?? '') . '</td>
+         <td>' . (!empty($row['created_date']) && $row['created_date'] != '0000-00-00 00:00:00' ? dateformat($row['created_date'], 1) : dateformat($row['purchage_date'] ?? '')) . '</td>
          <td>' . ($row['bill_number'] ?? '') . '</td>
          <td>' . ($row['barcode_number'] ?? '') . '</td>
          <td>' . ($row['item_name'] ?? '') . '</td>

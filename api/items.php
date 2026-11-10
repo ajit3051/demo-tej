@@ -211,7 +211,6 @@ switch ($action) {
             'rac_no'         => $input['rac_no'] ?? '',
             'self_no'        => $input['self_no'] ?? '',
             'status'         => $input['status'] ?? 'true',
-            'date'           => date('Y-m-d'),
             'created_date'   => date('Y-m-d H:i:s'),
             'update_date'    => date('Y-m-d H:i:s'),
         ];

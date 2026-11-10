@@ -135,10 +135,45 @@ function deleterecord(id) {
          $('#common-popup').modal('show');
          $('#common-popup').modal('show').one('click', '#confirm', function() {
 
+            $('#deleteaction').val('delete');
             $('#deleteid').val(id);
             $('#deleteform').submit();
          });
       });
+}
+
+function deleteRow(type) {
+    var selector = (type === 'latest' || type === 'latestRecord')
+        ? "#billwise-list-latest-results input[name='recent-chk[]']:checked"
+        : "#billwise-list-results input[name='recent-chk[]']:checked";
+
+    var checkedIds = [];
+    $(selector).each(function () {
+        var v = $(this).val();
+        if (v) checkedIds.push(v);
+    });
+
+    if (checkedIds.length === 0) {
+        $("input[name='recent-chk[]']:checked").each(function () {
+            var v = $(this).val();
+            if (v && checkedIds.indexOf(v) === -1) checkedIds.push(v);
+        });
+    }
+
+    if (checkedIds.length === 0) {
+        alert('Please select at least one record to delete.');
+        return;
+    }
+
+    $('#common-popup').load('popup/deleterecord', function () {
+        $('#common-popup').modal('show');
+        $('#common-popup').modal('show').one('click', '#confirm', function () {
+            $('#deleteaction').val('delete_bulk');
+            $('#deleteid').val('');
+            $('#deleteids').val(checkedIds.join(','));
+            $('#deleteform').submit();
+        });
+    });
 }
 function sendMail(id) {
    $('#common-popup').load('popup/send-mail?id='+id,

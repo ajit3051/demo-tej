@@ -7,38 +7,41 @@ $db = connect();
 
 $today = date("Y-m-d");
 
-$page       = $_REQUEST['page'];
-$sortOrder    = $_REQUEST['sortOrder'];
-$sortField    = $_REQUEST['sortField'];
-$formId       = $_REQUEST['formId'];
-$searchKey       = $_REQUEST['search'];
-$from_date       = $_REQUEST['from_date'];
-$to_date       = $_REQUEST['to_date'];
-$exportType       = $_REQUEST['export'];
+$page       = $_REQUEST['page'] ?? 1;
+$sortOrder    = $_REQUEST['sortOrder'] ?? 'DESC';
+$sortField    = $_REQUEST['sortField'] ?? 'id';
+if ($sortField === 'purchage_date') {
+   $sortField = 'created_date';
+}
+$formId       = $_REQUEST['formId'] ?? '';
+$searchKey       = $_REQUEST['search'] ?? '';
+$from_date       = $_REQUEST['from_date'] ?? '';
+$to_date       = $_REQUEST['to_date'] ?? '';
+$exportType       = $_REQUEST['export'] ?? '';
 
 $params = '';
 $fields = array();
 
 if ($exportType) {
-   $columns = 'MAX(TB.purchage_date) as purchage_date, TB.bill_number, MAX(TB.pay_mode) as pay_mode, MAX(TB.account_name) as account_name, MAX(TB.gst_type) as gst_type, SUM(TB.qty) as qty, SUM(CAST(TB.rate AS DECIMAL(10,2))) as rate, SUM(CAST(TB.gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(TB.amount AS DECIMAL(10,2))) as amount, MAX(TB.status) as status, COALESCE(MAX(TPM.paymode_name), MAX(TB.pay_mode)) as paymode_name';
+   $columns = 'MAX(TB.purchage_date) as purchage_date, MAX(TB.created_date) as created_date, TB.bill_number, MAX(TB.pay_mode) as pay_mode, MAX(TB.account_name) as account_name, MAX(TB.gst_type) as gst_type, SUM(TB.qty) as qty, SUM(CAST(TB.rate AS DECIMAL(10,2))) as rate, SUM(CAST(TB.gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(TB.amount AS DECIMAL(10,2))) as amount, MAX(TB.status) as status, COALESCE(MAX(TPM.paymode_name), MAX(TB.pay_mode)) as paymode_name';
 } else {
-   $columns = 'MAX(TB.id) as id, MAX(TB.purchage_date) as purchage_date, TB.bill_number, MAX(TB.pay_mode) as pay_mode, MAX(TB.account_name) as account_name, MAX(TB.gst_type) as gst_type, SUM(TB.qty) as qty, SUM(CAST(TB.rate AS DECIMAL(10,2))) as rate, SUM(CAST(TB.gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(TB.amount AS DECIMAL(10,2))) as amount, MAX(TB.status) as status, COALESCE(MAX(TPM.paymode_name), MAX(TB.pay_mode)) as paymode_name';
+   $columns = 'MAX(TB.id) as id, MAX(TB.purchage_date) as purchage_date, MAX(TB.created_date) as created_date, TB.bill_number, MAX(TB.pay_mode) as pay_mode, MAX(TB.account_name) as account_name, MAX(TB.gst_type) as gst_type, SUM(TB.qty) as qty, SUM(CAST(TB.rate AS DECIMAL(10,2))) as rate, SUM(CAST(TB.gst_amount AS DECIMAL(10,2))) as gst_amount, SUM(CAST(TB.amount AS DECIMAL(10,2))) as amount, MAX(TB.status) as status, COALESCE(MAX(TPM.paymode_name), MAX(TB.pay_mode)) as paymode_name';
 }
 
 $query = "SELECT $columns FROM tbl_bill as TB LEFT JOIN tbl_paymode_master as TPM ON (TPM.paymode_code = TB.pay_mode OR TPM.paymode_name = TB.pay_mode) WHERE TB.id > 0";
 
 if ($formId == 'latestsearchForm') {
-   $query .= " AND DATE(TB.created_date) = ?";
+   $query .= " AND DATE(COALESCE(TB.created_date, TB.purchage_date)) = ?";
    $params .= 's';
    $fields[] = $today;
 }
 if ($from_date) {
-   $query .= " AND TB.purchage_date >= ?";
+   $query .= " AND COALESCE(DATE(TB.created_date), TB.purchage_date) >= ?";
    $params .= 's';
    $fields[] = dateInSQLFormat($from_date);
 }
 if ($to_date) {
-   $query .= " AND TB.purchage_date <= ?";
+   $query .= " AND COALESCE(DATE(TB.created_date), TB.purchage_date) <= ?";
    $params .= 's';
    $fields[] = dateInSQLFormat($to_date);
 }
@@ -130,7 +133,7 @@ if ($totalRecordsWithLimit > 0) {
 
       $html .= '<tr>
          <td>' . $i . '</td>
-         <td>' . dateformat($row['purchage_date']) . '</td>
+         <td>' . (!empty($row['created_date']) && $row['created_date'] != '0000-00-00 00:00:00' ? dateformat($row['created_date'], 1) : dateformat($row['purchage_date'])) . '</td>
          <td>' . $row['bill_number'] . '</td>
          <td>' . $row['paymode_name'] . '</td>
          <td>' . $row['account_name'] . '</td>

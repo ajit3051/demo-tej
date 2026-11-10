@@ -28,8 +28,10 @@ if ($searchKey !== '') {
                OR style_name LIKE CONCAT('%', ?, '%') 
                OR size_name LIKE CONCAT('%', ?, '%') 
                OR description LIKE CONCAT('%', ?, '%') 
-               OR status LIKE CONCAT('%', ?, '%'))";
-   $params .= 'ssssssssssss';
+               OR status LIKE CONCAT('%', ?, '%')
+               OR created_date LIKE CONCAT('%', ?, '%'))";
+   $params .= 'sssssssssssss';
+   $fields[] = $searchKey;
    $fields[] = $searchKey;
    $fields[] = $searchKey;
    $fields[] = $searchKey;
@@ -55,7 +57,7 @@ $totalRecords = $stmt ? $stmt->num_rows() : 0;
 $recordsPerPage = isset($_SESSION["_RECORDPERPAGE_"]) && $_SESSION["_RECORDPERPAGE_"] ? (int)$_SESSION["_RECORDPERPAGE_"] : 20;
 $offSet = ($page - 1) * $recordsPerPage;
 
-$query .= " ORDER BY id DESC LIMIT $offSet, $recordsPerPage";
+$query .= " ORDER BY created_date DESC, id DESC LIMIT $offSet, $recordsPerPage";
 
 if (empty($fields)) {
    $stmt = $db->select($query);
@@ -107,6 +109,8 @@ if ($totalRecordsWithLimit > 0) {
          $galleryHtml = '<div class="no-img-box text-center" style="padding: 30px 15px; background: #f8f9fa; border: 1px dashed #ccc; border-radius: 4px;"><i class="fa fa-image fa-4x text-muted"></i><br><span class="text-muted" style="font-weight:500; display:inline-block; margin-top:8px;">No Images Uploaded</span></div>';
       }
 
+      $createdDate = !empty($user['created_date']) ? (dateformat($user['created_date'], 1) ?: '-') : '-';
+
       // Table Row
       $html .= '<tr>
          <td class="td-center-middle">' . $i++ . '</td>
@@ -132,6 +136,7 @@ if ($totalRecordsWithLimit > 0) {
          <td class="td-middle">' . htmlspecialchars($user['brand_name'] ?? '') . '</td>
          <td class="td-middle">' . htmlspecialchars($user['mrp'] ?? '') . '</td>
          <td class="td-middle">' . htmlspecialchars($user['sp'] ?? '') . '</td>
+         <td class="td-middle-muted">' . $createdDate . '</td>
       </tr>';
 
 
@@ -327,10 +332,10 @@ if ($totalRecordsWithLimit > 0) {
                   <!-- Footer Timestamps -->
                   <div class="row" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 8px;">
                      <div class="col-sm-6 text-muted" style="font-size: 12px;">
-                        <i class="fa fa-calendar-plus-o"></i> <strong>Created:</strong> ' . htmlspecialchars($user['created_date'] ?: 'N/A') . '
+                        <i class="fa fa-calendar-plus-o"></i> <strong>Created:</strong> ' . (!empty($user['created_date']) ? (dateformat($user['created_date'], 1) ?: 'N/A') : 'N/A') . '
                      </div>
                      <div class="col-sm-6 text-right text-muted" style="font-size: 12px;">
-                        <i class="fa fa-calendar-check-o"></i> <strong>Updated:</strong> ' . htmlspecialchars($user['update_date'] ?: 'N/A') . '
+                        <i class="fa fa-calendar-check-o"></i> <strong>Updated:</strong> ' . (!empty($user['update_date']) ? (dateformat($user['update_date'], 1) ?: 'N/A') : 'N/A') . '
                      </div>
                   </div>
                </div>

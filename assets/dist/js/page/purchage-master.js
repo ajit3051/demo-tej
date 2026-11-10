@@ -4,8 +4,11 @@
 
     $("#purchage_form").validate({
         rules: {
-            purchage_date: {
+            created_date: {
                 required: true
+            },
+            purchage_date: {
+                required: false
             },
             bill_number: {
                 required: true
@@ -30,8 +33,11 @@
             },*/
         },
         messages: {
+            created_date: {
+                required: "Please enter date & time."
+            },
             purchage_date: {
-                required: "Please enter invoice no."
+                required: "Please enter date & time."
             },
             bill_number: {
                 required: "Please enter bill number."

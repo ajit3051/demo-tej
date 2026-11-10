@@ -13,6 +13,7 @@
    
    $bill_no = $_GET['bill_no'] ?? '';
    
+   $created_date           = date('Y-m-d H:i:s');
    $purchage_date          = date('Y-m-d H:i:s');
    $bill_number            = '';
    $gst_type               = 'Inclusive';
@@ -53,7 +54,14 @@
    
    if (isset($_POST['form_action'])) {
    
-      $purchage_date          = dateInSQLFormat($_POST['purchage_date'] ?? '');
+      $created_date_raw       = $_POST['created_date'] ?? ($_POST['purchage_date'] ?? '');
+      if (!empty($created_date_raw)) {
+         $parsed_time = strtotime($created_date_raw);
+         $created_date = ($parsed_time !== false) ? date('Y-m-d H:i:s', $parsed_time) : (dateInSQLFormat($created_date_raw) ?: date('Y-m-d H:i:s'));
+      } else {
+         $created_date = date('Y-m-d H:i:s');
+      }
+      $purchage_date          = date('Y-m-d', strtotime($created_date));
       $bill_number            = $_POST['bill_number']            ?? '';
       $gst_type               = $_POST['gst_type']               ?? 'Inclusive';
       $under_gst              = $_POST['under_gst']              ?? 'Local';
@@ -187,7 +195,7 @@
                $purchase_price[$k] ?? '0', $percent_discount[$k] ?? '0', $discount_amt[$k] ?? '0', $after_pp[$k] ?? ($purchase_price[$k] ?? '0'),
                $mrp[$k] ?? '0', $discount_percent2[$k] ?? '0', $discount_amount2[$k] ?? '0', $selling_price[$k] ?? '0', $sp[$k] ?? ($selling_price[$k] ?? '0'), $total_amount2,
                $net_price[$k] ?? '0', $gst[$k] ?? '0', $cgst, $sgst, $gst_amount[$k] ?? '0', $taxable_amount[$k] ?? '0', $amount[$k] ?? '0',
-               $current_date
+               $created_date
             );
 
             // Sync generated barcode to tbl_item_master if master barcode is blank
@@ -255,7 +263,7 @@
    
                $insertid = $db->update(
                   "UPDATE tbl_purchase SET
-                     purchage_date=?, gst_type=?, under_gst=?, bill_type=?,
+                     purchage_date=?, created_date=?, gst_type=?, under_gst=?, bill_type=?,
                      account_name=?, mobile_number=?, ac_code=?, payment_mode=?, pay_cash=?,
                      pay_upi=?, pay_card=?, pay_credit=?, s_code=?, store_name=?, location=?,
                      packing_amount=?, delivery_amount=?, other_amount=?, labour_amount=?,
@@ -269,8 +277,8 @@
                      net_price=?, gst=?, cgst=?, sgst=?, gst_amount=?, taxable_amount=?, amount=?,
                      updated_date=?
                   WHERE id=?",
-                  str_repeat('s', 58) . 'i',
-                  $purchage_date, $gst_type, $under_gst, $bill_type,
+                  str_repeat('s', 59) . 'i',
+                  $purchage_date, $created_date, $gst_type, $under_gst, $bill_type,
                   $account_name, $mobile_number, $ac_code, $payment_mode, $pay_cash,
                   $pay_upi, $pay_card, $pay_credit, $s_code, $store_name, $location,
                   $packing_amount, $delivery_amount, $other_amount, $labour_amount,
@@ -334,7 +342,7 @@
                   $purchase_price[$k] ?? '0', $percent_discount[$k] ?? '0', $discount_amt[$k] ?? '0', $after_pp[$k] ?? ($purchase_price[$k] ?? '0'),
                   $mrp[$k] ?? '0', $discount_percent2[$k] ?? '0', $discount_amount2[$k] ?? '0', $selling_price[$k] ?? '0', $sp[$k] ?? ($selling_price[$k] ?? '0'), $total_amount2,
                   $net_price[$k] ?? '0', $gst[$k] ?? '0', $cgst, $sgst, $gst_amount[$k] ?? '0', $taxable_amount[$k] ?? '0', $amount[$k] ?? '0',
-                  $current_date
+                  $created_date
                );
             }
 
@@ -830,7 +838,8 @@
                                  <label>
                                  Date & Time
                                  </label>
-                                 <input type="text" name="purchage_date" id="purchage_date" class="form-control datetimepicker" autocomplete="off" placeholder="Enter Date..." value="<?= dateformat($purchage_date); ?>">
+                                 <input type="text" name="created_date" id="created_date" class="form-control datetimepicker" autocomplete="off" placeholder="Enter Date & Time..." value="<?= !empty($created_date) && $created_date != '0000-00-00 00:00:00' ? dateformat($created_date, 1) : (!empty($purchage_date) ? dateformat($purchage_date, 1) : dateformat(date('Y-m-d H:i:s'), 1)); ?>">
+                                 <input type="hidden" name="purchage_date" id="purchage_date" value="<?= !empty($created_date) && $created_date != '0000-00-00 00:00:00' ? dateformat($created_date, 1) : (!empty($purchage_date) ? dateformat($purchage_date, 1) : dateformat(date('Y-m-d H:i:s'), 1)); ?>">
                               </div>
                            </div>
                            <!-- BILL NO -->
@@ -1680,14 +1689,14 @@
                            var el = document.getElementById(id);
                            if (el) el.style.borderColor = '';
                         });
-                        ['gst_type','under_gst','bill_type','purchage_date','bill_number','invoice_number'].forEach(function(nm){
+                        ['gst_type','under_gst','bill_type','created_date','purchage_date','bill_number','invoice_number'].forEach(function(nm){
                            var el = document.querySelector('[name="' + nm + '"]');
                            if (el) el.style.borderColor = '';
                         });
                      
                         // ── 1. Main form required fields ──────────────────────────────────
                         var mainFields = [
-                           { name: 'purchage_date',    label: 'Purchase Date'   },
+                           { name: 'created_date',     label: 'Purchase Date & Time' },
                            { name: 'bill_number',      label: 'Bill No.'        },
                            // { name: 'invoice_number',   label: 'Invoice No.'     }
                         ];
@@ -1833,7 +1842,7 @@
                         <tr class="info">
                            <th><input type="checkbox"></th>
                            <th>SrNo</th>
-                           <th>Date</th>
+                           <th>Date & Time</th>
                            <th>Bill No</th>
                            <th>Invoice No</th>
                            <th>Account Name</th>
@@ -1970,5 +1979,8 @@
    if (otherInput) otherInput.addEventListener('input', updateAdditionalChargesTotal);
    if (labourInput) labourInput.addEventListener('input', updateAdditionalChargesTotal);
    window.addEventListener('load', updateAdditionalChargesTotal);
+   $(document).on('change blur input dp.change', '#created_date', function() {
+      $('#purchage_date').val($(this).val());
+   });
 </script>
 <!--end sidebar-toggle-->
